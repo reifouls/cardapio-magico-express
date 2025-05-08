@@ -16,7 +16,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 
 type ProdutoPopularidade = Tables<'produtos'> & {
   popularidade?: { nivel: number };
-  categoria?: { nome: string }; // Add proper typing for the join
+  categoria?: { nome: string };
 };
 
 export default function Engenharia() {

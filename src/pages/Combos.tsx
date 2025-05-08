@@ -13,6 +13,7 @@ import { Tables } from '@/integrations/supabase/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Plus, Save } from 'lucide-react';
 
+// Define proper types for our Combo data
 type Combo = Tables<'combos'> & {
   produtos?: {
     produto: {
@@ -25,18 +26,20 @@ type Combo = Tables<'combos'> & {
   }[];
 };
 
+type Produto = Tables<'produtos'>;
+
 export default function Combos() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentCombo, setCurrentCombo] = useState<Partial<Combo> | null>(null);
   const [produtosCombo, setProdutosCombo] = useState<{id: string, quantidade: number}[]>([]);
 
-  const { data: combos, isLoading } = useSupabaseQuery<Combo[]>(
+  const { data: combos, isLoading } = useSupabaseQuery<'combos', Combo[]>(
     'combos',
     ['list'],
     { order: 'nome' }
   );
 
-  const { data: produtosList } = useSupabaseQuery<Tables<'produtos'>[]>(
+  const { data: produtosList } = useSupabaseQuery<'produtos', Produto[]>(
     'produtos',
     ['list'],
     { 
@@ -47,7 +50,7 @@ export default function Combos() {
   );
 
   const { insert: insertCombo, update: updateCombo, remove: deleteCombo } = 
-    useSupabaseMutation<Tables<'combos'>>(
+    useSupabaseMutation<'combos'>(
       'combos',
       {
         onSuccessMessage: 'Combo salvo com sucesso!',
@@ -56,7 +59,7 @@ export default function Combos() {
       }
     );
 
-  const { insert: insertComboProduto } = useSupabaseMutation<Tables<'combo_produtos'>>(
+  const { insert: insertComboProduto } = useSupabaseMutation<'combo_produtos'>(
     'combo_produtos',
     {
       queryKeyToInvalidate: ['combos', 'list']
@@ -88,7 +91,7 @@ export default function Combos() {
   };
 
   const handleAddProduto = () => {
-    if (produtosList?.length) {
+    if (produtosList && produtosList.length > 0) {
       setProdutosCombo([...produtosCombo, { id: produtosList[0].id, quantidade: 1 }]);
     }
   };
@@ -135,7 +138,7 @@ export default function Combos() {
   };
 
   React.useEffect(() => {
-    if (produtosCombo.length > 0 && produtosList?.length) {
+    if (produtosCombo.length > 0 && produtosList && produtosList.length > 0) {
       calculateTotals();
     }
   }, [produtosCombo]);
@@ -147,26 +150,23 @@ export default function Combos() {
       const { custoTotal, margem } = calculateTotals();
       let comboId = currentCombo.id;
       
+      const comboData = {
+        nome: currentCombo.nome,
+        preco_total: currentCombo.preco_total,
+        custo_total: custoTotal,
+        margem_combo: margem
+      };
+      
       if (comboId) {
         // Update existing combo
         await updateCombo({
           id: comboId,
-          data: {
-            nome: currentCombo.nome,
-            preco_total: currentCombo.preco_total,
-            custo_total: custoTotal,
-            margem_combo: margem
-          }
+          data: comboData
         });
       } else {
         // Insert new combo
-        const newCombo = await insertCombo({
-          nome: currentCombo.nome,
-          preco_total: currentCombo.preco_total,
-          custo_total: custoTotal,
-          margem_combo: margem
-        });
-        comboId = newCombo[0]?.id;
+        const newCombo = await insertCombo(comboData);
+        comboId = newCombo?.[0]?.id;
       }
 
       // Insert combo_produtos entries

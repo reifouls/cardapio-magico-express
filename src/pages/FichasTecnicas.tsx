@@ -13,8 +13,9 @@ import { Tables } from '@/integrations/supabase/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Plus, Save } from 'lucide-react';
 
+// Define proper types for our data
 type Produto = Tables<'produtos'> & {
-  categoria?: { nome: string };
+  categoria?: Tables<'categorias'>;
   ficha_tecnica?: {
     ingrediente: { 
       nome: string;
@@ -25,12 +26,16 @@ type Produto = Tables<'produtos'> & {
   }[];
 };
 
+type Categoria = Tables<'categorias'>;
+type Ingrediente = Tables<'ingredientes'>;
+type FichaTecnica = Tables<'ficha_tecnica'>;
+
 export default function FichasTecnicas() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentProduto, setCurrentProduto] = useState<Partial<Produto> | null>(null);
   const [ingredientes, setIngredientes] = useState<{id: string, quantidade: number}[]>([]);
 
-  const { data: produtos, isLoading } = useSupabaseQuery<Produto[]>(
+  const { data: produtos, isLoading } = useSupabaseQuery<'produtos', Produto[]>(
     'produtos',
     ['list'],
     { 
@@ -39,19 +44,19 @@ export default function FichasTecnicas() {
     }
   );
 
-  const { data: categoriasList } = useSupabaseQuery<Tables<'categorias'>[]>(
+  const { data: categoriasList } = useSupabaseQuery<'categorias', Categoria[]>(
     'categorias',
     ['list'],
     { order: 'nome' }
   );
 
-  const { data: ingredientesList } = useSupabaseQuery<Tables<'ingredientes'>[]>(
+  const { data: ingredientesList } = useSupabaseQuery<'ingredientes', Ingrediente[]>(
     'ingredientes',
     ['list'],
     { order: 'nome' }
   );
 
-  const { insert: insertProduto, update: updateProduto } = useSupabaseMutation<Tables<'produtos'>>(
+  const { insert: insertProduto, update: updateProduto } = useSupabaseMutation<'produtos'>(
     'produtos',
     {
       onSuccessMessage: 'Produto salvo com sucesso!',
@@ -60,7 +65,7 @@ export default function FichasTecnicas() {
     }
   );
 
-  const { insert: insertFichaTecnica } = useSupabaseMutation<Tables<'ficha_tecnica'>>(
+  const { insert: insertFichaTecnica } = useSupabaseMutation<'ficha_tecnica'>(
     'ficha_tecnica',
     {
       onSuccessMessage: 'Ficha técnica salva com sucesso!',
@@ -85,7 +90,7 @@ export default function FichasTecnicas() {
   };
 
   const handleAddIngrediente = () => {
-    if (ingredientesList?.length) {
+    if (ingredientesList && ingredientesList.length > 0) {
       setIngredientes([...ingredientes, { id: ingredientesList[0].id, quantidade: 0 }]);
     }
   };
@@ -111,7 +116,7 @@ export default function FichasTecnicas() {
         };
         
         const newProduto = await insertProduto(produtoData);
-        produtoId = newProduto[0]?.id;
+        produtoId = newProduto?.[0]?.id;
       } else {
         // Update existing produto
         await updateProduto({
@@ -151,7 +156,7 @@ export default function FichasTecnicas() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome"
+      accessorKey: "nome" as const
     },
     {
       header: "Categoria",
@@ -159,27 +164,27 @@ export default function FichasTecnicas() {
     },
     {
       header: "Rendimento",
-      accessorKey: "rendimento",
+      accessorKey: "rendimento" as const,
       cell: (row: Produto) => `${row.rendimento} porções`
     },
     {
       header: "Custo Total",
-      accessorKey: "custo_total_receita",
+      accessorKey: "custo_total_receita" as const,
       cell: (row: Produto) => formatCurrency(row.custo_total_receita || 0)
     },
     {
       header: "Custo por Porção",
-      accessorKey: "custo_por_porcao",
+      accessorKey: "custo_por_porcao" as const,
       cell: (row: Produto) => formatCurrency(row.custo_por_porcao || 0)
     },
     {
       header: "Preço",
-      accessorKey: "preco_definido",
+      accessorKey: "preco_definido" as const,
       cell: (row: Produto) => formatCurrency(row.preco_definido || 0)
     },
     {
       header: "Margem",
-      accessorKey: "margem",
+      accessorKey: "margem" as const,
       cell: (row: Produto) => formatarPercentual(row.margem || 0)
     }
   ];

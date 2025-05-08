@@ -4,15 +4,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Tables } from '@/integrations/supabase/types';
+import { PostgrestFilterBuilder } from '@supabase/supabase-js';
 
-// Define a type for valid table names based on the Supabase schema
+// Define valid table names
 type TableName = keyof Database['public']['Tables'];
-type ValidTable = TableName;
 
-// Helper type to make TypeScript happy with our table parameters
-type TableRow<T extends ValidTable> = Tables<T>;
-
-export function useSupabaseQuery<T extends ValidTable, R = TableRow<T>>(
+/**
+ * Hook for querying data from Supabase with strong typing
+ */
+export function useSupabaseQuery<T extends TableName, R = Tables<T>[]>(
   table: T,
   queryKey: string[],
   options?: {
@@ -33,7 +33,7 @@ export function useSupabaseQuery<T extends ValidTable, R = TableRow<T>>(
       if (options?.filter) {
         Object.entries(options.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
-            // Using type assertion to handle typing issues
+            // Using type assertion for PostgrestFilterBuilder methods
             query = query.eq(key, value) as any;
           }
         });
@@ -62,7 +62,10 @@ export function useSupabaseQuery<T extends ValidTable, R = TableRow<T>>(
   });
 }
 
-export function useSupabaseMutation<T extends ValidTable>(
+/**
+ * Hook for mutations (insert, update, delete) to Supabase tables with strong typing
+ */
+export function useSupabaseMutation<T extends TableName>(
   table: T,
   options?: {
     onSuccessMessage?: string;
@@ -74,10 +77,10 @@ export function useSupabaseMutation<T extends ValidTable>(
   
   // Insert mutation
   const insertMutation = useMutation({
-    mutationFn: async (newData: Partial<TableRow<T>>) => {
+    mutationFn: async (newData: Partial<Tables<T>>) => {
       const { data, error } = await supabase
         .from(table)
-        .insert(newData)
+        .insert(newData as any)
         .select();
 
       if (error) {
@@ -102,10 +105,10 @@ export function useSupabaseMutation<T extends ValidTable>(
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<TableRow<T>> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Tables<T>> }) => {
       const { data: responseData, error } = await supabase
         .from(table)
-        .update(data)
+        .update(data as any)
         .eq('id', id)
         .select();
 
@@ -168,7 +171,10 @@ export function useSupabaseMutation<T extends ValidTable>(
   };
 }
 
-export function useSupabaseSelect<T extends ValidTable>(
+/**
+ * Hook for selecting options from a table column, formatted for dropdowns
+ */
+export function useSupabaseSelect<T extends TableName>(
   table: T,
   column: string,
   queryKey: string[]
@@ -195,7 +201,7 @@ export function useSupabaseSelect<T extends ValidTable>(
   });
 }
 
-// Add a type declaration to make TypeScript happy
+// Type declaration for Supabase Database schema
 type Database = {
   public: {
     Tables: {
