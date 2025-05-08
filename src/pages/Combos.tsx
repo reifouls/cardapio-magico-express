@@ -30,13 +30,13 @@ export default function Combos() {
   const [currentCombo, setCurrentCombo] = useState<Partial<Combo> | null>(null);
   const [produtosCombo, setProdutosCombo] = useState<{id: string, quantidade: number}[]>([]);
 
-  const { data: combos, isLoading } = useSupabaseQuery<'combos', ComboWithProducts[]>(
+  const { data: combos, isLoading } = useSupabaseQuery(
     'combos',
     ['list'],
     { order: 'nome' }
   );
 
-  const { data: produtosList } = useSupabaseQuery<'produtos'>(
+  const { data: produtosList } = useSupabaseQuery(
     'produtos',
     ['list'],
     { 
@@ -47,7 +47,7 @@ export default function Combos() {
   );
 
   const { insert: insertCombo, update: updateCombo, remove: deleteCombo } = 
-    useSupabaseMutation<'combos'>(
+    useSupabaseMutation(
       'combos',
       {
         onSuccessMessage: 'Combo salvo com sucesso!',
@@ -56,7 +56,7 @@ export default function Combos() {
       }
     );
 
-  const { insert: insertComboProduto } = useSupabaseMutation<'combo_produtos'>(
+  const { insert: insertComboProduto } = useSupabaseMutation(
     'combo_produtos',
     {
       queryKeyToInvalidate: ['combos', 'list']
@@ -189,23 +189,23 @@ export default function Combos() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome"
+      accessorKey: "nome" as keyof ComboWithProducts
     },
     {
       header: "Custo Total",
-      accessorKey: "custo_total",
+      accessorKey: "custo_total" as keyof ComboWithProducts,
       cell: (info: { row: { original: ComboWithProducts } }) => 
         formatCurrency(info.row.original.custo_total || 0)
     },
     {
       header: "Preço Total",
-      accessorKey: "preco_total",
+      accessorKey: "preco_total" as keyof ComboWithProducts,
       cell: (info: { row: { original: ComboWithProducts } }) => 
         formatCurrency(info.row.original.preco_total)
     },
     {
       header: "Margem",
-      accessorKey: "margem_combo",
+      accessorKey: "margem_combo" as keyof ComboWithProducts,
       cell: (info: { row: { original: ComboWithProducts } }) => 
         formatarPercentual(info.row.original.margem_combo || 0)
     }

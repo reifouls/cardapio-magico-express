@@ -5,16 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Database } from '@/integrations/supabase/types';
 
-type TablesSchema = Database['public']['Tables'];
+// Define table names as literal types for better type safety
+type TableName = keyof Database['public']['Tables'];
 
 /**
  * Hook for querying data from Supabase with strong typing
  */
 export function useSupabaseQuery<
-  TableName extends keyof TablesSchema,
-  ReturnType = TablesSchema[TableName]['Row'][]
+  T extends TableName,
+  ReturnType = Database['public']['Tables'][T]['Row'][]
 >(
-  tableName: TableName,
+  tableName: T,
   queryKey: string[],
   options?: {
     select?: string;
@@ -25,8 +26,10 @@ export function useSupabaseQuery<
   }
 ) {
   return useQuery({
-    queryKey: [tableName as string, ...queryKey],
+    queryKey: [tableName, ...queryKey],
     queryFn: async () => {
+      // Need to use type assertion here since supabase.from expects a string
+      // but we're using a typed TableName
       let query = supabase
         .from(tableName as string)
         .select(options?.select || '*');
@@ -34,8 +37,8 @@ export function useSupabaseQuery<
       if (options?.filter) {
         Object.entries(options.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
-            // @ts-ignore - Using eq method dynamically
-            query = query.eq(key, value);
+            // Need to use any here due to dynamic method call
+            query = query.eq(key, value) as any;
           }
         });
       }
@@ -66,8 +69,8 @@ export function useSupabaseQuery<
 /**
  * Hook for mutations (insert, update, delete) to Supabase tables with strong typing
  */
-export function useSupabaseMutation<TableName extends keyof TablesSchema>(
-  tableName: TableName,
+export function useSupabaseMutation<T extends TableName>(
+  tableName: T,
   options?: {
     onSuccessMessage?: string;
     onErrorMessage?: string;
@@ -78,7 +81,7 @@ export function useSupabaseMutation<TableName extends keyof TablesSchema>(
   
   // Insert mutation
   const insertMutation = useMutation({
-    mutationFn: async (newData: Partial<TablesSchema[TableName]['Insert']>) => {
+    mutationFn: async (newData: Partial<Database['public']['Tables'][T]['Insert']>) => {
       const { data, error } = await supabase
         .from(tableName as string)
         .insert(newData as any)
@@ -111,7 +114,7 @@ export function useSupabaseMutation<TableName extends keyof TablesSchema>(
       data 
     }: { 
       id: string; 
-      data: Partial<TablesSchema[TableName]['Update']> 
+      data: Partial<Database['public']['Tables'][T]['Update']> 
     }) => {
       const { data: responseData, error } = await supabase
         .from(tableName as string)
@@ -181,13 +184,13 @@ export function useSupabaseMutation<TableName extends keyof TablesSchema>(
 /**
  * Hook for selecting options from a table column, formatted for dropdowns
  */
-export function useSupabaseSelect<TableName extends keyof TablesSchema>(
-  tableName: TableName,
+export function useSupabaseSelect<T extends TableName>(
+  tableName: T,
   column: string,
   queryKey: string[]
 ) {
   return useQuery({
-    queryKey: [tableName as string, 'select', ...queryKey],
+    queryKey: [tableName, 'select', ...queryKey],
     queryFn: async () => {
       const { data, error } = await supabase
         .from(tableName as string)

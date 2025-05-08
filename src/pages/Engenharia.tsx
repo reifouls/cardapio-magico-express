@@ -29,7 +29,7 @@ export default function Engenharia() {
     'produtos',
     ['engenharia'],
     { 
-      select: '*, popularidade(*), categoria:categoria_id(*)',
+      select: '*, popularidade(*), categoria:categorias(*)',
       order: 'nome'
     }
   );
@@ -107,35 +107,35 @@ export default function Engenharia() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome" 
+      accessorKey: "nome" as keyof ProdutoWithExtras
     },
     {
       header: "Categoria",
-      accessorKey: "categoria.nome",
+      accessorKey: "categoria.nome" as string,
       cell: (info: { row: { original: ProdutoWithExtras } }) => 
         info.row.original.categoria?.nome || "-"
     },
     {
       header: "Custo",
-      accessorKey: "custo_por_porcao",
+      accessorKey: "custo_por_porcao" as keyof ProdutoWithExtras,
       cell: (info: { row: { original: ProdutoWithExtras } }) => 
         formatCurrency(info.row.original.custo_por_porcao || 0)
     },
     {
       header: "Preço",
-      accessorKey: "preco_definido",
+      accessorKey: "preco_definido" as keyof ProdutoWithExtras,
       cell: (info: { row: { original: ProdutoWithExtras } }) => 
         formatCurrency(info.row.original.preco_definido || 0)
     },
     {
       header: "Margem",
-      accessorKey: "margem",
+      accessorKey: "margem" as keyof ProdutoWithExtras,
       cell: (info: { row: { original: ProdutoWithExtras } }) => 
         formatarPercentual(info.row.original.margem || 0)
     },
     {
       header: "Popularidade",
-      accessorKey: "popularidade_nivel",
+      accessorKey: "popularidade_nivel" as keyof ProdutoWithExtras,
       cell: (info: { row: { original: ProdutoWithExtras } }) => {
         const nivel = info.row.original.popularidade_nivel || 0;
         return (
@@ -153,7 +153,7 @@ export default function Engenharia() {
     },
     {
       header: "Classificação",
-      accessorKey: "classificacao",
+      accessorKey: "classificacao" as keyof ProdutoWithExtras,
       cell: (info: { row: { original: ProdutoWithExtras } }) => {
         const classificacao = info.row.original.classificacao || 'Indefinido';
         let bgColor = 'bg-gray-200';

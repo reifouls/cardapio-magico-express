@@ -11,13 +11,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash } from 'lucide-react';
 
+interface Column<T> {
+  header: string;
+  accessorKey: keyof T | string;
+  cell?: (info: { row: { original: T } }) => React.ReactNode;
+}
+
 interface DataTableProps<T> {
   data: T[];
-  columns: {
-    header: string;
-    accessorKey: keyof T | ((row: T) => React.ReactNode);
-    cell?: (row: T) => React.ReactNode;
-  }[];
+  columns: Column<T>[];
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
   isLoading?: boolean;
@@ -38,6 +40,23 @@ export function DataTable<T extends { id: string }>({
     return <div className="w-full text-center py-8">Nenhum registro encontrado.</div>;
   }
 
+  const getValue = (row: T, accessorKey: keyof T | string): React.ReactNode => {
+    if (typeof accessorKey === 'string' && accessorKey.includes('.')) {
+      // Handle nested properties
+      const keys = accessorKey.split('.');
+      let value: any = row;
+      
+      for (const key of keys) {
+        if (value === null || value === undefined) return null;
+        value = value[key as keyof typeof value];
+      }
+      
+      return value;
+    }
+    
+    return (row as any)[accessorKey];
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -55,10 +74,8 @@ export function DataTable<T extends { id: string }>({
               {columns.map((column, index) => (
                 <TableCell key={index}>
                   {column.cell 
-                    ? column.cell(row) 
-                    : typeof column.accessorKey === 'function'
-                      ? column.accessorKey(row)
-                      : row[column.accessorKey] as React.ReactNode}
+                    ? column.cell({ row: { original: row } }) 
+                    : getValue(row, column.accessorKey)}
                 </TableCell>
               ))}
               {(onEdit || onDelete) && (

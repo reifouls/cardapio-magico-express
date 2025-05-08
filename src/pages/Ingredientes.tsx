@@ -19,14 +19,14 @@ export default function Ingredientes() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentIngrediente, setCurrentIngrediente] = useState<Partial<Ingrediente> | null>(null);
 
-  const { data: ingredientes, isLoading } = useSupabaseQuery<'ingredientes'>(
+  const { data: ingredientes, isLoading } = useSupabaseQuery(
     'ingredientes',
     ['list'],
     { order: 'nome' }
   );
 
   const { insert: insertIngrediente, update: updateIngrediente, remove: deleteIngrediente } = 
-    useSupabaseMutation<'ingredientes'>(
+    useSupabaseMutation(
       'ingredientes',
       {
         onSuccessMessage: 'Ingrediente salvo com sucesso!',
@@ -110,27 +110,27 @@ export default function Ingredientes() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome"
+      accessorKey: "nome" as keyof Ingrediente
     },
     {
       header: "Tipo",
-      accessorKey: "tipo",
+      accessorKey: "tipo" as keyof Ingrediente,
       cell: (info: { row: { original: Ingrediente } }) => 
         info.row.original.tipo === 'insumo' ? 'Insumo' : 'Embalagem'
     },
     {
       header: "Unidade",
-      accessorKey: "unidade"
+      accessorKey: "unidade" as keyof Ingrediente
     },
     {
       header: "Custo Unitário",
-      accessorKey: "custo_unitario",
+      accessorKey: "custo_unitario" as keyof Ingrediente,
       cell: (info: { row: { original: Ingrediente } }) => 
         formatCurrency(info.row.original.custo_unitario)
     },
     {
       header: "Fornecedor",
-      accessorKey: "fornecedor",
+      accessorKey: "fornecedor" as keyof Ingrediente,
       cell: (info: { row: { original: Ingrediente } }) => 
         info.row.original.fornecedor || '-'
     }
