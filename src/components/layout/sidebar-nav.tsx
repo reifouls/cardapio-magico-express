@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "react-router-dom";
 import {
-  ClipboardList,
-  ShoppingBasket,
-  Package,
-  LineChart,
   Settings,
+  ShoppingBasket,
+  ClipboardList,
+  LineChart,
+  Package,
   FileText,
   Download,
 } from "lucide-react";
@@ -56,9 +56,9 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
 export function getNavItems() {
   return [
     {
-      title: "Fichas Técnicas",
-      href: "/fichas-tecnicas",
-      icon: <ClipboardList className="h-5 w-5" />,
+      title: "Premissas",
+      href: "/premissas",
+      icon: <Settings className="h-5 w-5" />,
     },
     {
       title: "Ingredientes",
@@ -66,9 +66,9 @@ export function getNavItems() {
       icon: <ShoppingBasket className="h-5 w-5" />,
     },
     {
-      title: "Combos",
-      href: "/combos",
-      icon: <Package className="h-5 w-5" />,
+      title: "Fichas Técnicas",
+      href: "/fichas-tecnicas",
+      icon: <ClipboardList className="h-5 w-5" />,
     },
     {
       title: "Engenharia",
@@ -76,9 +76,9 @@ export function getNavItems() {
       icon: <LineChart className="h-5 w-5" />,
     },
     {
-      title: "Premissas",
-      href: "/premissas",
-      icon: <Settings className="h-5 w-5" />,
+      title: "Combos",
+      href: "/combos",
+      icon: <Package className="h-5 w-5" />,
     },
     {
       title: "Relatórios",

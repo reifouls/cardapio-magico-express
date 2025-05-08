@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataTable } from '@/components/ui/data-table';
@@ -10,23 +10,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save } from 'lucide-react';
+import { Save, Search } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 
-type Ingrediente = Database['public']['Tables']['ingredientes']['Row'];
+type Ingrediente = Database['public']['Tables']['ingredientes']['Row'] & {
+  sequencial?: number;
+};
 
 export default function Ingredientes() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentIngrediente, setCurrentIngrediente] = useState<Partial<Ingrediente> | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: ingredientes, isLoading } = useSupabaseQuery(
+  const { data: ingredientes, isLoading } = useSupabaseQuery<
+    'ingredientes',
+    false,
+    Ingrediente[]
+  >(
     'ingredientes',
     ['list'],
     { order: 'nome' }
   );
 
   const { insert: insertIngrediente, update: updateIngrediente, remove: deleteIngrediente } = 
-    useSupabaseMutation(
+    useSupabaseMutation<'ingredientes'>(
       'ingredientes',
       {
         onSuccessMessage: 'Ingrediente salvo com sucesso!',
@@ -34,6 +41,27 @@ export default function Ingredientes() {
         queryKeyToInvalidate: ['ingredientes', 'list']
       }
     );
+
+  // Add sequential ID to each ingredient
+  const ingredientesWithSequential = useMemo(() => {
+    if (!ingredientes) return [];
+    
+    return ingredientes.map((ingrediente, index) => ({
+      ...ingrediente,
+      sequencial: index + 1
+    }));
+  }, [ingredientes]);
+  
+  // Apply search filter
+  const filteredIngredientes = useMemo(() => {
+    if (!searchTerm.trim()) return ingredientesWithSequential;
+    
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return ingredientesWithSequential.filter(ingrediente => 
+      ingrediente.nome.toLowerCase().includes(lowerSearchTerm) || 
+      (ingrediente.fornecedor && ingrediente.fornecedor.toLowerCase().includes(lowerSearchTerm))
+    );
+  }, [ingredientesWithSequential, searchTerm]);
 
   const handleNewClick = () => {
     setCurrentIngrediente({
@@ -109,28 +137,32 @@ export default function Ingredientes() {
   // Define columns with proper typing for DataTable
   const columns = [
     {
+      header: "ID",
+      accessorKey: "sequencial"
+    },
+    {
       header: "Nome",
-      accessorKey: "nome" as keyof Ingrediente
+      accessorKey: "nome"
     },
     {
       header: "Tipo",
-      accessorKey: "tipo" as keyof Ingrediente,
+      accessorKey: "tipo",
       cell: (info: { row: { original: Ingrediente } }) => 
         info.row.original.tipo === 'insumo' ? 'Insumo' : 'Embalagem'
     },
     {
       header: "Unidade",
-      accessorKey: "unidade" as keyof Ingrediente
+      accessorKey: "unidade"
     },
     {
       header: "Custo Unitário",
-      accessorKey: "custo_unitario" as keyof Ingrediente,
+      accessorKey: "custo_unitario",
       cell: (info: { row: { original: Ingrediente } }) => 
         formatCurrency(info.row.original.custo_unitario)
     },
     {
       header: "Fornecedor",
-      accessorKey: "fornecedor" as keyof Ingrediente,
+      accessorKey: "fornecedor",
       cell: (info: { row: { original: Ingrediente } }) => 
         info.row.original.fornecedor || '-'
     }
@@ -146,12 +178,21 @@ export default function Ingredientes() {
       />
       
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row justify-between items-center space-y-0">
           <CardTitle>Lista de Ingredientes</CardTitle>
+          <div className="relative w-72">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder="Buscar ingrediente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <DataTable 
-            data={ingredientes || []}
+            data={filteredIngredientes}
             columns={columns}
             onEdit={handleEditClick}
             onDelete={handleDeleteClick}

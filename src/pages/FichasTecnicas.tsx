@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataTable } from '@/components/ui/data-table';
@@ -31,6 +31,9 @@ export default function FichasTecnicas() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentProduto, setCurrentProduto] = useState<Partial<Produto> | null>(null);
   const [ingredientes, setIngredientes] = useState<{id: string, quantidade: number}[]>([]);
+  const [custoTotal, setCustoTotal] = useState(0);
+  const [custoPorPorcao, setCustoPorPorcao] = useState(0);
+  const [precoSugerido, setPrecoSugerido] = useState(0);
 
   const { data: produtos, isLoading } = useSupabaseQuery<
     'produtos',
@@ -65,6 +68,26 @@ export default function FichasTecnicas() {
     { order: 'nome' }
   );
 
+  const { data: markup } = useSupabaseQuery(
+    'premissas_markup',
+    ['markup'],
+    { single: true }
+  );
+
+  const { data: fichaTecnica, refetch: refetchFichaTecnica } = useSupabaseQuery<
+    'ficha_tecnica',
+    false,
+    (FichaTecnica & {ingrediente: Ingrediente})[]
+  >(
+    'ficha_tecnica',
+    ['by-produto', currentProduto?.id || ''],
+    { 
+      select: '*, ingrediente:ingrediente_id(*)',
+      filter: { column: 'produto_id', operator: 'eq', value: currentProduto?.id || '' }
+    },
+    { enabled: !!currentProduto?.id }
+  );
+
   const { insert: insertProduto, update: updateProduto } = useSupabaseMutation<'produtos'>(
     'produtos',
     {
@@ -74,13 +97,65 @@ export default function FichasTecnicas() {
     }
   );
 
-  const { insert: insertFichaTecnica } = useSupabaseMutation<'ficha_tecnica'>(
+  const { insert: insertFichaTecnica, remove: removeFichaTecnica } = useSupabaseMutation<'ficha_tecnica'>(
     'ficha_tecnica',
     {
       onSuccessMessage: 'Ficha técnica salva com sucesso!',
-      queryKeyToInvalidate: ['produtos', 'list']
+      queryKeyToInvalidate: ['produtos', 'list', 'ficha_tecnica']
     }
   );
+
+  // Load ficha_tecnica when editing
+  useEffect(() => {
+    if (fichaTecnica && fichaTecnica.length > 0 && currentProduto?.id) {
+      // Map ficha_tecnica to ingredientes state format
+      setIngredientes(
+        fichaTecnica.map(item => ({
+          id: item.ingrediente_id,
+          quantidade: item.quantidade_utilizada
+        }))
+      );
+
+      // Calculate costs
+      calculateCustos(fichaTecnica, currentProduto.rendimento || 1);
+    }
+  }, [fichaTecnica, currentProduto]);
+
+  const calculateCustos = (fichaItems: (FichaTecnica & {ingrediente: Ingrediente})[], rendimento: number) => {
+    // Calculate total cost
+    const total = fichaItems.reduce((sum, item) => {
+      return sum + (item.quantidade_utilizada * item.ingrediente.custo_unitario);
+    }, 0);
+    
+    setCustoTotal(total);
+    
+    // Calculate cost per portion
+    const porPorcao = total / rendimento;
+    setCustoPorPorcao(porPorcao);
+    
+    // Calculate suggested price based on markup
+    if (markup && markup.markup_ponderado) {
+      const sugerido = porPorcao * markup.markup_ponderado;
+      setPrecoSugerido(sugerido);
+    }
+  };
+
+  // Calculate costs when ingredients or rendimiento change
+  useEffect(() => {
+    if (ingredientesList && ingredientes.length > 0) {
+      const fichaItems = ingredientes.map(item => {
+        const ing = ingredientesList.find(i => i.id === item.id);
+        return {
+          ingrediente_id: item.id,
+          produto_id: currentProduto?.id || '',
+          quantidade_utilizada: item.quantidade,
+          ingrediente: ing!
+        };
+      }).filter(item => item.ingrediente); // Filter out any undefined ingredientes
+      
+      calculateCustos(fichaItems, currentProduto?.rendimento || 1);
+    }
+  }, [ingredientes, ingredientesList, currentProduto?.rendimento]);
 
   const handleNewClick = () => {
     setCurrentProduto({
@@ -89,12 +164,15 @@ export default function FichasTecnicas() {
       tipo: 'Produto',
     });
     setIngredientes([]);
+    setCustoTotal(0);
+    setCustoPorPorcao(0);
+    setPrecoSugerido(0);
     setIsFormOpen(true);
   };
 
   const handleEditClick = (produto: ProdutoWithExtras) => {
     setCurrentProduto(produto);
-    // Fetch ficha técnica for this product
+    refetchFichaTecnica();
     setIsFormOpen(true);
   };
 
@@ -114,30 +192,34 @@ export default function FichasTecnicas() {
     try {
       let produtoId = currentProduto.id;
       
+      // Prepare values for custo_total e custo_por_porcao
+      const produtoData = {
+        nome: currentProduto.nome,
+        categoria_id: currentProduto.categoria_id,
+        rendimento: currentProduto.rendimento,
+        tipo: currentProduto.tipo,
+        preco_definido: currentProduto.preco_definido,
+        custo_total_receita: custoTotal,
+        custo_por_porcao: custoPorPorcao,
+        preco_sugerido: precoSugerido,
+        margem: currentProduto.preco_definido 
+          ? (currentProduto.preco_definido - custoPorPorcao) / currentProduto.preco_definido 
+          : (precoSugerido - custoPorPorcao) / precoSugerido
+      };
+      
       if (!produtoId) {
         // Insert new produto
-        const produtoData = {
-          nome: currentProduto.nome,
-          categoria_id: currentProduto.categoria_id,
-          rendimento: currentProduto.rendimento,
-          tipo: currentProduto.tipo,
-          preco_definido: currentProduto.preco_definido
-        };
-        
         const newProduto = await insertProduto(produtoData);
         produtoId = newProduto?.[0]?.id;
       } else {
         // Update existing produto
         await updateProduto({
           id: produtoId,
-          data: {
-            nome: currentProduto.nome,
-            categoria_id: currentProduto.categoria_id,
-            rendimento: currentProduto.rendimento,
-            tipo: currentProduto.tipo,
-            preco_definido: currentProduto.preco_definido
-          }
+          data: produtoData
         });
+        
+        // Remove existing ficha_tecnica entries to recreate them
+        await removeFichaTecnica({ column: 'produto_id', value: produtoId });
       }
 
       // Insert or update ficha_tecnica entries
@@ -195,7 +277,7 @@ export default function FichasTecnicas() {
       header: "Preço",
       accessorKey: "preco_definido",
       cell: (info: { row: { original: ProdutoWithExtras } }) => 
-        formatCurrency(info.row.original.preco_definido || 0)
+        formatCurrency(info.row.original.preco_definido || info.row.original.preco_sugerido || 0)
     },
     {
       header: "Margem",
@@ -291,6 +373,47 @@ export default function FichasTecnicas() {
                   onChange={(e) => setCurrentProduto(
                     {...currentProduto!, preco_definido: parseFloat(e.target.value) || undefined}
                   )}
+                />
+                {precoSugerido > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Preço sugerido: {formatCurrency(precoSugerido)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Custo Total da Receita</Label>
+                <Input
+                  type="text"
+                  value={formatCurrency(custoTotal)}
+                  readOnly
+                  className="bg-gray-50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Custo por Porção</Label>
+                <Input
+                  type="text"
+                  value={formatCurrency(custoPorPorcao)}
+                  readOnly
+                  className="bg-gray-50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Margem Estimada</Label>
+                <Input
+                  type="text"
+                  value={formatarPercentual(
+                    currentProduto?.preco_definido 
+                      ? (currentProduto.preco_definido - custoPorPorcao) / currentProduto.preco_definido 
+                      : (precoSugerido - custoPorPorcao) / precoSugerido
+                  )}
+                  readOnly
+                  className="bg-gray-50"
                 />
               </div>
             </div>

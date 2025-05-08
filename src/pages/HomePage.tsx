@@ -87,6 +87,78 @@ export default function HomePage() {
     }
   });
 
+  // Carrega dados reais para os gráficos
+  const { data: margemData = [] } = useQuery({
+    queryKey: ["dashboard", "margem-chart"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("produtos")
+        .select("id, margem")
+        .not("margem", "is", null);
+      
+      if (!data || data.length === 0) return [];
+
+      // Categoriza produtos por faixas de margem
+      let altaMargem = 0;
+      let mediaMargem = 0;
+      let baixaMargem = 0;
+      
+      data.forEach(item => {
+        const margem = item.margem;
+        if (margem >= 0.5) {
+          altaMargem++;
+        } else if (margem >= 0.3 && margem < 0.5) {
+          mediaMargem++;
+        } else {
+          baixaMargem++;
+        }
+      });
+      
+      const total = data.length;
+      
+      return [
+        { name: 'Alta Margem (>50%)', value: altaMargem, percentage: (altaMargem / total) * 100 },
+        { name: 'Média Margem (30-50%)', value: mediaMargem, percentage: (mediaMargem / total) * 100 },
+        { name: 'Baixa Margem (<30%)', value: baixaMargem, percentage: (baixaMargem / total) * 100 },
+      ];
+    }
+  });
+  
+  const { data: popularidadeData = [] } = useQuery({
+    queryKey: ["dashboard", "popularidade-chart"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("popularidade")
+        .select("id, nivel");
+      
+      if (!data || data.length === 0) return [];
+      
+      // Categoriza produtos por nível de popularidade
+      let alta = 0;
+      let media = 0;
+      let baixa = 0;
+      
+      data.forEach(item => {
+        const nivel = item.nivel;
+        if (nivel >= 8) {
+          alta++;
+        } else if (nivel >= 5 && nivel < 8) {
+          media++;
+        } else {
+          baixa++;
+        }
+      });
+      
+      const total = data.length || 1;
+      
+      return [
+        { name: 'Alta (>80%)', value: alta, percentage: (alta / total) * 100 },
+        { name: 'Média (50-80%)', value: media, percentage: (media / total) * 100 },
+        { name: 'Baixa (<50%)', value: baixa, percentage: (baixa / total) * 100 },
+      ];
+    }
+  });
+  
   // Transforming sugestoes data to match the expected format for RecentesList
   const { data: sugestoesRaw = [], isLoading: sugestoesLoading } = useQuery({
     queryKey: ["sugestoes", "recentes"],
@@ -120,18 +192,6 @@ export default function HomePage() {
     tipo: item.tipo                      // Additional property
   }));
 
-  const margemChartData = [
-    { name: 'Alta Margem', value: 40 },
-    { name: 'Média Margem', value: 30 },
-    { name: 'Baixa Margem', value: 30 },
-  ];
-  
-  const popularidadeChartData = [
-    { name: 'Alta', value: 40 },
-    { name: 'Média', value: 35 },
-    { name: 'Baixa', value: 25 },
-  ];
-  
   const COLORS = ['#16a34a', '#f59e0b', '#dc2626'];
 
   return (
@@ -193,7 +253,7 @@ export default function HomePage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={margemChartData}
+                      data={margemData}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -202,12 +262,12 @@ export default function HomePage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {margemChartData.map((entry, index) => (
+                      {margemData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Legend />
-                    <Tooltip formatter={(value) => [`${value}%`, 'Percentual']} />
+                    <Tooltip formatter={(value) => [`${value} produto(s)`, 'Quantidade']} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -225,7 +285,7 @@ export default function HomePage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={popularidadeChartData}
+                      data={popularidadeData}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -234,12 +294,12 @@ export default function HomePage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {popularidadeChartData.map((entry, index) => (
+                      {popularidadeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Legend />
-                    <Tooltip formatter={(value) => [`${value}%`, 'Percentual']} />
+                    <Tooltip formatter={(value) => [`${value} produto(s)`, 'Quantidade']} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

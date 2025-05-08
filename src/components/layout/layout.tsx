@@ -3,7 +3,7 @@ import React from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarNav, getNavItems } from "./sidebar-nav";
 import { Button } from "@/components/ui/button";
-import { ChefHat, Menu } from "lucide-react";
+import { ChefHat, Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -34,10 +34,17 @@ export default function Layout() {
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left">
+                <SheetContent side="top" className="w-full pt-10">
                   <div className="py-4">
-                    <h2 className="text-lg font-semibold mb-4">Menu</h2>
-                    <SidebarNav items={navItems} />
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-lg font-semibold">Menu</h2>
+                      <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <X className="h-5 w-5" />
+                        </Button>
+                      </SheetTrigger>
+                    </div>
+                    <SidebarNav items={navItems} className="flex-col" />
                   </div>
                 </SheetContent>
               </Sheet>
