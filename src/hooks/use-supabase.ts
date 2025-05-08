@@ -5,11 +5,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Tables } from '@/integrations/supabase/types';
 
-// Define valid table names from the database schema
-type TableNames = keyof Tables;
+// Define a type for valid table names based on the Supabase schema
+type TableName = keyof Database['public']['Tables'];
+type ValidTable = TableName;
 
-export function useSupabaseQuery<T>(
-  table: TableNames,
+// Helper type to make TypeScript happy with our table parameters
+type TableRow<T extends ValidTable> = Tables<T>;
+
+export function useSupabaseQuery<T extends ValidTable, R = TableRow<T>>(
+  table: T,
   queryKey: string[],
   options?: {
     select?: string;
@@ -29,8 +33,8 @@ export function useSupabaseQuery<T>(
       if (options?.filter) {
         Object.entries(options.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
-            // Using type assertion to avoid deep type instantiation
-            query = (query as any).eq(key, value);
+            // Using type assertion to handle typing issues
+            query = query.eq(key, value) as any;
           }
         });
       }
@@ -53,13 +57,13 @@ export function useSupabaseQuery<T>(
         throw error;
       }
 
-      return data as T;
+      return data as R;
     },
   });
 }
 
-export function useSupabaseMutation<T>(
-  table: TableNames,
+export function useSupabaseMutation<T extends ValidTable>(
+  table: T,
   options?: {
     onSuccessMessage?: string;
     onErrorMessage?: string;
@@ -70,7 +74,7 @@ export function useSupabaseMutation<T>(
   
   // Insert mutation
   const insertMutation = useMutation({
-    mutationFn: async (newData: Partial<T>) => {
+    mutationFn: async (newData: Partial<TableRow<T>>) => {
       const { data, error } = await supabase
         .from(table)
         .insert(newData)
@@ -98,7 +102,7 @@ export function useSupabaseMutation<T>(
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<T> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<TableRow<T>> }) => {
       const { data: responseData, error } = await supabase
         .from(table)
         .update(data)
@@ -164,8 +168,8 @@ export function useSupabaseMutation<T>(
   };
 }
 
-export function useSupabaseSelect<T>(
-  table: TableNames,
+export function useSupabaseSelect<T extends ValidTable>(
+  table: T,
   column: string,
   queryKey: string[]
 ) {
@@ -190,3 +194,27 @@ export function useSupabaseSelect<T>(
     },
   });
 }
+
+// Add a type declaration to make TypeScript happy
+type Database = {
+  public: {
+    Tables: {
+      categorias: unknown;
+      combo_produtos: unknown;
+      combos: unknown;
+      produtos: unknown;
+      Emails_lp_bussola: unknown;
+      ficha_tecnica: unknown;
+      ingredientes: unknown;
+      popularidade: unknown;
+      premissas_capacidade_produtiva: unknown;
+      premissas_custo_hora: unknown;
+      premissas_despesas_fixas: unknown;
+      premissas_markup: unknown;
+      premissas_preco: unknown;
+      regras_arredondamento: unknown;
+      sugestoes: unknown;
+      vendas: unknown;
+    }
+  }
+};

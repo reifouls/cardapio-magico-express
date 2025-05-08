@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { PageHeader } from '@/components/ui/page-header';
@@ -191,21 +192,21 @@ export default function Combos() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome"
+      accessorKey: "nome" as const
     },
     {
       header: "Custo Total",
-      accessorKey: "custo_total",
+      accessorKey: "custo_total" as const,
       cell: (row: Combo) => formatCurrency(row.custo_total || 0)
     },
     {
       header: "Preço Total",
-      accessorKey: "preco_total",
+      accessorKey: "preco_total" as const,
       cell: (row: Combo) => formatCurrency(row.preco_total)
     },
     {
       header: "Margem",
-      accessorKey: "margem_combo",
+      accessorKey: "margem_combo" as const,
       cell: (row: Combo) => formatarPercentual(row.margem_combo || 0)
     }
   ];

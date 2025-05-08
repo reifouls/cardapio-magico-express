@@ -16,12 +16,13 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 
 type ProdutoPopularidade = Tables<'produtos'> & {
   popularidade?: { nivel: number };
+  categoria?: { nome: string }; // Add proper typing for the join
 };
 
 export default function Engenharia() {
   const [activeTab, setActiveTab] = useState('tabela');
 
-  const { data: produtos, isLoading } = useSupabaseQuery<ProdutoPopularidade[]>(
+  const { data: produtos, isLoading } = useSupabaseQuery<'produtos', ProdutoPopularidade[]>(
     'produtos',
     ['engenharia'],
     { 
@@ -103,7 +104,7 @@ export default function Engenharia() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome"
+      accessorKey: "nome" as const
     },
     {
       header: "Categoria",
@@ -111,22 +112,22 @@ export default function Engenharia() {
     },
     {
       header: "Custo",
-      accessorKey: "custo_por_porcao",
+      accessorKey: "custo_por_porcao" as const,
       cell: (row: typeof produtosProcessados[0]) => formatCurrency(row.custo_por_porcao || 0)
     },
     {
       header: "Preço",
-      accessorKey: "preco_definido",
+      accessorKey: "preco_definido" as const,
       cell: (row: typeof produtosProcessados[0]) => formatCurrency(row.preco_definido || 0)
     },
     {
       header: "Margem",
-      accessorKey: "margem",
+      accessorKey: "margem" as const,
       cell: (row: typeof produtosProcessados[0]) => formatarPercentual(row.margem || 0)
     },
     {
       header: "Popularidade",
-      accessorKey: "popularidade_nivel",
+      accessorKey: "popularidade_nivel" as const,
       cell: (row: typeof produtosProcessados[0]) => {
         const nivel = row.popularidade_nivel || 0;
         return (
@@ -144,7 +145,7 @@ export default function Engenharia() {
     },
     {
       header: "Classificação",
-      accessorKey: "classificacao",
+      accessorKey: "classificacao" as const,
       cell: (row: typeof produtosProcessados[0]) => {
         const classificacao = row.classificacao || 'Indefinido';
         let bgColor = 'bg-gray-200';
