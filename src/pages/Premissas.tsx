@@ -21,7 +21,10 @@ export default function Premissas() {
   const [activeTab, setActiveTab] = useState('capacidade');
 
   // ===================== CAPACIDADE PRODUTIVA =====================
-  const { data: capacidadeProdutiva, isLoading: isLoadingCapacidade } = useSupabaseQuery<'premissas_capacidade_produtiva', CapacidadeProdutiva>(
+  const { data: capacidadeProdutiva, isLoading: isLoadingCapacidade } = useSupabaseQuery<
+    'premissas_capacidade_produtiva',
+    true
+  >(
     'premissas_capacidade_produtiva',
     ['capacidade'],
     { single: true }
@@ -123,7 +126,10 @@ export default function Premissas() {
   ];
 
   // ===================== MARKUP =====================
-  const { data: markup, isLoading: isLoadingMarkup } = useSupabaseQuery<'premissas_markup', Markup>(
+  const { data: markup, isLoading: isLoadingMarkup } = useSupabaseQuery<
+    'premissas_markup',
+    true
+  >(
     'premissas_markup',
     ['markup'],
     { single: true }
