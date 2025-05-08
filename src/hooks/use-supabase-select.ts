@@ -31,7 +31,8 @@ export function useSupabaseSelect<T extends TableNames>(
         throw error;
       }
 
-      return data.map((item) => ({
+      // Type assertion to ensure TypeScript knows the structure of our data
+      return (data || []).map((item: any) => ({
         value: item.id,
         label: item[column]
       })) as SelectOption[];
