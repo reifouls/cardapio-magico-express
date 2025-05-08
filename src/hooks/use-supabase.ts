@@ -72,16 +72,14 @@ export function useSupabaseMutation<T extends TableNames>(
     queryKeyToInvalidate?: string[];
   }
 ) {
-  type InsertType = Database['public']['Tables'][T]['Insert'];
-  type UpdateType = Database['public']['Tables'][T]['Update'];
   const queryClient = useQueryClient();
   
   // Insert mutation
   const insertMutation = useMutation({
-    mutationFn: async (newData: InsertType) => {
+    mutationFn: async (newData: Database['public']['Tables'][T]['Insert']) => {
       const { data, error } = await supabase
         .from(tableName)
-        .insert(newData)
+        .insert(newData as any)
         .select();
 
       if (error) {
@@ -111,11 +109,11 @@ export function useSupabaseMutation<T extends TableNames>(
       data 
     }: { 
       id: string; 
-      data: UpdateType 
+      data: Database['public']['Tables'][T]['Update'] 
     }) => {
       const { data: responseData, error } = await supabase
         .from(tableName)
-        .update(data)
+        .update(data as any)
         .eq('id', id as any) // Using 'as any' to bypass strict type checking for the id column
         .select();
 

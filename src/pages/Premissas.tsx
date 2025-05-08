@@ -21,7 +21,7 @@ export default function Premissas() {
   const [activeTab, setActiveTab] = useState('capacidade');
 
   // ===================== CAPACIDADE PRODUTIVA =====================
-  const { data: capacidadeProdutiva, isLoading: isLoadingCapacidade } = useSupabaseQuery<'premissas_capacidade_produtiva'>(
+  const { data: capacidadeProdutiva, isLoading: isLoadingCapacidade } = useSupabaseQuery<'premissas_capacidade_produtiva', CapacidadeProdutiva>(
     'premissas_capacidade_produtiva',
     ['capacidade'],
     { single: true }
@@ -36,7 +36,6 @@ export default function Premissas() {
 
   React.useEffect(() => {
     if (capacidadeProdutiva) {
-      // Handle data correctly - capacidadeProdutiva is now a single object, not array
       setCapacidadeForm(capacidadeProdutiva);
     }
   }, [capacidadeProdutiva]);
@@ -53,15 +52,25 @@ export default function Premissas() {
     if (capacidadeProdutiva?.id) {
       await updateCapacidade({
         id: capacidadeProdutiva.id,
-        data: capacidadeForm
+        data: {
+          funcionarios: capacidadeForm.funcionarios || 0,
+          horas_dia: capacidadeForm.horas_dia || 0,
+          dias_mes: capacidadeForm.dias_mes || 0,
+          produtividade: capacidadeForm.produtividade || 0
+        }
       });
     } else {
-      await insertCapacidade(capacidadeForm);
+      await insertCapacidade({
+        funcionarios: capacidadeForm.funcionarios || 0,
+        horas_dia: capacidadeForm.horas_dia || 0,
+        dias_mes: capacidadeForm.dias_mes || 0,
+        produtividade: capacidadeForm.produtividade || 0
+      });
     }
   };
 
   // ===================== DESPESAS FIXAS =====================
-  const { data: despesasFixas, isLoading: isLoadingDespesas } = useSupabaseQuery<'premissas_despesas_fixas'>(
+  const { data: despesasFixas, isLoading: isLoadingDespesas } = useSupabaseQuery<'premissas_despesas_fixas', DespesaFixa[]>(
     'premissas_despesas_fixas',
     ['despesas'],
     { order: 'nome_despesa' }
@@ -83,7 +92,11 @@ export default function Premissas() {
 
   const handleAddDespesa = async () => {
     if (!novaDespesa.nome_despesa || !novaDespesa.valor) return;
-    await insertDespesa(novaDespesa);
+    await insertDespesa({
+      nome_despesa: novaDespesa.nome_despesa,
+      tipo: novaDespesa.tipo || 'Aluguel',
+      valor: novaDespesa.valor
+    });
     setNovaDespesa({ nome_despesa: '', tipo: 'Aluguel', valor: 0 });
   };
 
@@ -110,7 +123,7 @@ export default function Premissas() {
   ];
 
   // ===================== MARKUP =====================
-  const { data: markup, isLoading: isLoadingMarkup } = useSupabaseQuery<'premissas_markup'>(
+  const { data: markup, isLoading: isLoadingMarkup } = useSupabaseQuery<'premissas_markup', Markup>(
     'premissas_markup',
     ['markup'],
     { single: true }
@@ -127,7 +140,6 @@ export default function Premissas() {
 
   React.useEffect(() => {
     if (markup) {
-      // Handle data correctly - markup is now a single object, not array
       setMarkupForm(markup);
     }
   }, [markup]);
@@ -144,15 +156,29 @@ export default function Premissas() {
     if (markup?.id) {
       await updateMarkup({
         id: markup.id,
-        data: markupForm
+        data: {
+          percentual_custos_fixos: markupForm.percentual_custos_fixos || 0,
+          percentual_impostos: markupForm.percentual_impostos || 0,
+          percentual_delivery: markupForm.percentual_delivery || 0,
+          markup_loja: markupForm.markup_loja || 0,
+          markup_delivery: markupForm.markup_delivery || 0,
+          markup_ponderado: markupForm.markup_ponderado || 0
+        }
       });
     } else {
-      await insertMarkup(markupForm);
+      await insertMarkup({
+        percentual_custos_fixos: markupForm.percentual_custos_fixos || 0,
+        percentual_impostos: markupForm.percentual_impostos || 0,
+        percentual_delivery: markupForm.percentual_delivery || 0,
+        markup_loja: markupForm.markup_loja || 0,
+        markup_delivery: markupForm.markup_delivery || 0,
+        markup_ponderado: markupForm.markup_ponderado || 0
+      });
     }
   };
 
   // ===================== REGRAS DE ARREDONDAMENTO =====================
-  const { data: regrasArredondamento, isLoading: isLoadingRegras } = useSupabaseQuery<'regras_arredondamento'>(
+  const { data: regrasArredondamento, isLoading: isLoadingRegras } = useSupabaseQuery<'regras_arredondamento', RegraArredondamento[]>(
     'regras_arredondamento',
     ['regras'],
     { order: 'nome' }
@@ -174,7 +200,11 @@ export default function Premissas() {
 
   const handleAddRegra = async () => {
     if (!novaRegra.nome || !novaRegra.logica) return;
-    await insertRegra(novaRegra);
+    await insertRegra({
+      nome: novaRegra.nome,
+      descricao: novaRegra.descricao || '',
+      logica: novaRegra.logica
+    });
     setNovaRegra({ nome: '', descricao: '', logica: '' });
   };
 
