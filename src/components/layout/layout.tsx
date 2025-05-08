@@ -5,11 +5,11 @@ import { SidebarNav, getNavItems } from "./sidebar-nav";
 import { Button } from "@/components/ui/button";
 import { ChefHat, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Layout() {
   const navigate = useNavigate();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const navItems = getNavItems();
 
   return (

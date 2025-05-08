@@ -3,9 +3,29 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
+import { Tables } from '@/integrations/supabase/types';
+
+// Define valid table names from the database schema
+type TableNames = 
+  | 'produtos' 
+  | 'ingredientes' 
+  | 'categorias' 
+  | 'ficha_tecnica' 
+  | 'combos' 
+  | 'combo_produtos' 
+  | 'vendas' 
+  | 'popularidade' 
+  | 'sugestoes' 
+  | 'premissas_preco' 
+  | 'regras_arredondamento' 
+  | 'premissas_despesas_fixas' 
+  | 'premissas_capacidade_produtiva' 
+  | 'premissas_custo_hora' 
+  | 'premissas_markup' 
+  | 'Emails_lp_bussola';
 
 export function useSupabaseQuery<T>(
-  table: string,
+  table: TableNames,
   queryKey: string[],
   options?: {
     select?: string;
@@ -54,7 +74,7 @@ export function useSupabaseQuery<T>(
 }
 
 export function useSupabaseMutation<T>(
-  table: string,
+  table: TableNames,
   options?: {
     onSuccessMessage?: string;
     onErrorMessage?: string;
@@ -160,7 +180,7 @@ export function useSupabaseMutation<T>(
 }
 
 export function useSupabaseSelect<T>(
-  table: string,
+  table: TableNames,
   column: string,
   queryKey: string[]
 ) {
@@ -178,7 +198,7 @@ export function useSupabaseSelect<T>(
         throw error;
       }
 
-      return data.map(item => ({
+      return data.map((item: any) => ({
         value: item.id,
         label: item[column]
       }));

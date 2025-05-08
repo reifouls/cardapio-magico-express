@@ -87,7 +87,8 @@ export default function HomePage() {
     }
   });
 
-  const { data: sugestoes = [], isLoading: sugestoesLoading } = useQuery({
+  // Transforming sugestoes data to match the expected format for RecentesList
+  const { data: sugestoesRaw = [], isLoading: sugestoesLoading } = useQuery({
     queryKey: ["sugestoes", "recentes"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -108,6 +109,16 @@ export default function HomePage() {
       return data;
     }
   });
+  
+  // Transform sugestoesRaw to match the expected format
+  const sugestoes = sugestoesRaw.map(item => ({
+    id: item.id,
+    nome: item.produtos?.nome || 'N/A',  // Use the product name as nome
+    valor: undefined,                    // Not used for this list
+    status: item.status,                 // Keep the status
+    data: item.created_at,               // Use created_at as data
+    tipo: item.tipo                      // Additional property
+  }));
 
   const margemChartData = [
     { name: 'Alta Margem', value: 40 },
@@ -157,11 +168,7 @@ export default function HomePage() {
           title="Sugestões"
           items={sugestoes}
           columns={[
-            { 
-              header: "Produto", 
-              accessorKey: "produtos.nome",
-              cell: (item) => item.produtos?.nome || "N/A"
-            },
+            { header: "Produto", accessorKey: "nome" },
             { header: "Tipo", accessorKey: "tipo" },
             { header: "Status", accessorKey: "status" }
           ]}
