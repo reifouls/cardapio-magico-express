@@ -45,7 +45,8 @@ export function useSupabaseQuery<T>(
       if (options?.filter) {
         Object.entries(options.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
-            query = query.eq(key, value);
+            // Using type assertion to avoid deep type instantiation
+            query = (query as any).eq(key, value);
           }
         });
       }
