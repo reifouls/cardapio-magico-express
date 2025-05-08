@@ -5,28 +5,31 @@ import { PageHeader } from '@/components/ui/page-header';
 import { DataTable } from '@/components/ui/data-table';
 import { formatCurrency, formatarPercentual } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tables } from '@/integrations/supabase/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ChartPie, 
-  ChartBar, 
-  Grid2x2 
-} from 'lucide-react';
+import { ChartPie, ChartBar, Grid2x2 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Database } from '@/integrations/supabase/types';
 
-type ProdutoPopularidade = Tables<'produtos'> & {
-  popularidade?: { nivel: number };
-  categoria?: { nome: string };
-};
+type Produto = Database['public']['Tables']['produtos']['Row'];
+type Categoria = Database['public']['Tables']['categorias']['Row'];
+type Popularidade = Database['public']['Tables']['popularidade']['Row'];
+
+// Extended product type with popularidade and categoria
+interface ProdutoWithExtras extends Produto {
+  popularidade?: Popularidade;
+  categoria?: Categoria;
+  popularidade_nivel?: number;
+  classificacao?: string;
+}
 
 export default function Engenharia() {
   const [activeTab, setActiveTab] = useState('tabela');
 
-  const { data: produtos, isLoading } = useSupabaseQuery<'produtos', ProdutoPopularidade[]>(
+  const { data: produtos, isLoading } = useSupabaseQuery<'produtos', ProdutoWithExtras[]>(
     'produtos',
     ['engenharia'],
     { 
-      select: '*, popularidade(*), categoria:categoria_id(nome)',
+      select: '*, popularidade(*), categoria:categoria_id(*)',
       order: 'nome'
     }
   );
@@ -87,12 +90,12 @@ export default function Engenharia() {
     const categorias: Record<string, { margem: number, count: number }> = {};
     
     produtosProcessados.forEach(produto => {
-      const categoria = produto.categoria?.nome || 'Sem categoria';
-      if (!categorias[categoria]) {
-        categorias[categoria] = { margem: 0, count: 0 };
+      const categoriaNome = produto.categoria?.nome || 'Sem categoria';
+      if (!categorias[categoriaNome]) {
+        categorias[categoriaNome] = { margem: 0, count: 0 };
       }
-      categorias[categoria].margem += produto.margem || 0;
-      categorias[categoria].count += 1;
+      categorias[categoriaNome].margem += produto.margem || 0;
+      categorias[categoriaNome].count += 1;
     });
     
     return Object.entries(categorias).map(([name, data]) => ({
@@ -104,32 +107,37 @@ export default function Engenharia() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome" as const
+      accessorKey: "nome" 
     },
     {
       header: "Categoria",
-      accessorKey: (row: typeof produtosProcessados[0]) => row.categoria?.nome || "-"
+      accessorKey: "categoria.nome",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        info.row.original.categoria?.nome || "-"
     },
     {
       header: "Custo",
-      accessorKey: "custo_por_porcao" as const,
-      cell: (row: typeof produtosProcessados[0]) => formatCurrency(row.custo_por_porcao || 0)
+      accessorKey: "custo_por_porcao",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        formatCurrency(info.row.original.custo_por_porcao || 0)
     },
     {
       header: "Preço",
-      accessorKey: "preco_definido" as const,
-      cell: (row: typeof produtosProcessados[0]) => formatCurrency(row.preco_definido || 0)
+      accessorKey: "preco_definido",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        formatCurrency(info.row.original.preco_definido || 0)
     },
     {
       header: "Margem",
-      accessorKey: "margem" as const,
-      cell: (row: typeof produtosProcessados[0]) => formatarPercentual(row.margem || 0)
+      accessorKey: "margem",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        formatarPercentual(info.row.original.margem || 0)
     },
     {
       header: "Popularidade",
-      accessorKey: "popularidade_nivel" as const,
-      cell: (row: typeof produtosProcessados[0]) => {
-        const nivel = row.popularidade_nivel || 0;
+      accessorKey: "popularidade_nivel",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => {
+        const nivel = info.row.original.popularidade_nivel || 0;
         return (
           <div className="flex items-center">
             <div className="w-20 bg-gray-200 rounded-full h-2.5 mr-2">
@@ -145,9 +153,9 @@ export default function Engenharia() {
     },
     {
       header: "Classificação",
-      accessorKey: "classificacao" as const,
-      cell: (row: typeof produtosProcessados[0]) => {
-        const classificacao = row.classificacao || 'Indefinido';
+      accessorKey: "classificacao",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => {
+        const classificacao = info.row.original.classificacao || 'Indefinido';
         let bgColor = 'bg-gray-200';
         
         switch (classificacao) {

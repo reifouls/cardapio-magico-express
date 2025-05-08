@@ -9,24 +9,24 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tables } from '@/integrations/supabase/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save } from 'lucide-react';
+import { Database } from '@/integrations/supabase/types';
 
-type Ingrediente = Tables<'ingredientes'>;
+type Ingrediente = Database['public']['Tables']['ingredientes']['Row'];
 
 export default function Ingredientes() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentIngrediente, setCurrentIngrediente] = useState<Partial<Ingrediente> | null>(null);
 
-  const { data: ingredientes, isLoading } = useSupabaseQuery<Ingrediente[]>(
+  const { data: ingredientes, isLoading } = useSupabaseQuery<'ingredientes'>(
     'ingredientes',
     ['list'],
     { order: 'nome' }
   );
 
   const { insert: insertIngrediente, update: updateIngrediente, remove: deleteIngrediente } = 
-    useSupabaseMutation<Ingrediente>(
+    useSupabaseMutation<'ingredientes'>(
       'ingredientes',
       {
         onSuccessMessage: 'Ingrediente salvo com sucesso!',
@@ -106,6 +106,7 @@ export default function Ingredientes() {
     { value: 'pc', label: 'Pacote (pc)' }
   ];
 
+  // Define columns with proper typing for DataTable
   const columns = [
     {
       header: "Nome",
@@ -114,7 +115,8 @@ export default function Ingredientes() {
     {
       header: "Tipo",
       accessorKey: "tipo",
-      cell: (row: Ingrediente) => row.tipo === 'insumo' ? 'Insumo' : 'Embalagem'
+      cell: (info: { row: { original: Ingrediente } }) => 
+        info.row.original.tipo === 'insumo' ? 'Insumo' : 'Embalagem'
     },
     {
       header: "Unidade",
@@ -123,12 +125,14 @@ export default function Ingredientes() {
     {
       header: "Custo Unitário",
       accessorKey: "custo_unitario",
-      cell: (row: Ingrediente) => formatCurrency(row.custo_unitario)
+      cell: (info: { row: { original: Ingrediente } }) => 
+        formatCurrency(info.row.original.custo_unitario)
     },
     {
       header: "Fornecedor",
       accessorKey: "fornecedor",
-      cell: (row: Ingrediente) => row.fornecedor || '-'
+      cell: (info: { row: { original: Ingrediente } }) => 
+        info.row.original.fornecedor || '-'
     }
   ];
 

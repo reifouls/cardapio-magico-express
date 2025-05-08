@@ -3,17 +3,18 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
-import { Tables } from '@/integrations/supabase/types';
-import { PostgrestFilterBuilder } from '@supabase/supabase-js';
+import { Database } from '@/integrations/supabase/types';
 
-// Define valid table names
-type TableName = keyof Database['public']['Tables'];
+type TablesSchema = Database['public']['Tables'];
 
 /**
  * Hook for querying data from Supabase with strong typing
  */
-export function useSupabaseQuery<T extends TableName, R = Tables<T>[]>(
-  table: T,
+export function useSupabaseQuery<
+  TableName extends keyof TablesSchema,
+  ReturnType = TablesSchema[TableName]['Row'][]
+>(
+  tableName: TableName,
   queryKey: string[],
   options?: {
     select?: string;
@@ -24,17 +25,17 @@ export function useSupabaseQuery<T extends TableName, R = Tables<T>[]>(
   }
 ) {
   return useQuery({
-    queryKey: [table, ...queryKey],
+    queryKey: [tableName as string, ...queryKey],
     queryFn: async () => {
       let query = supabase
-        .from(table)
+        .from(tableName as string)
         .select(options?.select || '*');
 
       if (options?.filter) {
         Object.entries(options.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
-            // Using type assertion for PostgrestFilterBuilder methods
-            query = query.eq(key, value) as any;
+            // @ts-ignore - Using eq method dynamically
+            query = query.eq(key, value);
           }
         });
       }
@@ -57,7 +58,7 @@ export function useSupabaseQuery<T extends TableName, R = Tables<T>[]>(
         throw error;
       }
 
-      return data as R;
+      return data as ReturnType;
     },
   });
 }
@@ -65,8 +66,8 @@ export function useSupabaseQuery<T extends TableName, R = Tables<T>[]>(
 /**
  * Hook for mutations (insert, update, delete) to Supabase tables with strong typing
  */
-export function useSupabaseMutation<T extends TableName>(
-  table: T,
+export function useSupabaseMutation<TableName extends keyof TablesSchema>(
+  tableName: TableName,
   options?: {
     onSuccessMessage?: string;
     onErrorMessage?: string;
@@ -77,9 +78,9 @@ export function useSupabaseMutation<T extends TableName>(
   
   // Insert mutation
   const insertMutation = useMutation({
-    mutationFn: async (newData: Partial<Tables<T>>) => {
+    mutationFn: async (newData: Partial<TablesSchema[TableName]['Insert']>) => {
       const { data, error } = await supabase
-        .from(table)
+        .from(tableName as string)
         .insert(newData as any)
         .select();
 
@@ -105,9 +106,15 @@ export function useSupabaseMutation<T extends TableName>(
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Tables<T>> }) => {
+    mutationFn: async ({ 
+      id, 
+      data 
+    }: { 
+      id: string; 
+      data: Partial<TablesSchema[TableName]['Update']> 
+    }) => {
       const { data: responseData, error } = await supabase
-        .from(table)
+        .from(tableName as string)
         .update(data as any)
         .eq('id', id)
         .select();
@@ -136,7 +143,7 @@ export function useSupabaseMutation<T extends TableName>(
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from(table)
+        .from(tableName as string)
         .delete()
         .eq('id', id);
 
@@ -174,16 +181,16 @@ export function useSupabaseMutation<T extends TableName>(
 /**
  * Hook for selecting options from a table column, formatted for dropdowns
  */
-export function useSupabaseSelect<T extends TableName>(
-  table: T,
+export function useSupabaseSelect<TableName extends keyof TablesSchema>(
+  tableName: TableName,
   column: string,
   queryKey: string[]
 ) {
   return useQuery({
-    queryKey: [table, 'select', ...queryKey],
+    queryKey: [tableName as string, 'select', ...queryKey],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from(table)
+        .from(tableName as string)
         .select(`id, ${column}`)
         .order(column);
 
@@ -200,27 +207,3 @@ export function useSupabaseSelect<T extends TableName>(
     },
   });
 }
-
-// Type declaration for Supabase Database schema
-type Database = {
-  public: {
-    Tables: {
-      categorias: unknown;
-      combo_produtos: unknown;
-      combos: unknown;
-      produtos: unknown;
-      Emails_lp_bussola: unknown;
-      ficha_tecnica: unknown;
-      ingredientes: unknown;
-      popularidade: unknown;
-      premissas_capacidade_produtiva: unknown;
-      premissas_custo_hora: unknown;
-      premissas_despesas_fixas: unknown;
-      premissas_markup: unknown;
-      premissas_preco: unknown;
-      regras_arredondamento: unknown;
-      sugestoes: unknown;
-      vendas: unknown;
-    }
-  }
-};

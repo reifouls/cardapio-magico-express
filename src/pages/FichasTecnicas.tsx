@@ -9,48 +9,45 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tables } from '@/integrations/supabase/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Plus, Save } from 'lucide-react';
+import { Database } from '@/integrations/supabase/types';
 
 // Define proper types for our data
-type Produto = Tables<'produtos'> & {
-  categoria?: Tables<'categorias'>;
-  ficha_tecnica?: {
-    ingrediente: { 
-      nome: string;
-      unidade: string;
-      custo_unitario: number;
-    };
-    quantidade_utilizada: number;
-  }[];
-};
+type Produto = Database['public']['Tables']['produtos']['Row'];
+type Categoria = Database['public']['Tables']['categorias']['Row'];
+type Ingrediente = Database['public']['Tables']['ingredientes']['Row'];
+type FichaTecnica = Database['public']['Tables']['ficha_tecnica']['Row'];
 
-type Categoria = Tables<'categorias'>;
-type Ingrediente = Tables<'ingredientes'>;
-type FichaTecnica = Tables<'ficha_tecnica'>;
+// Extended product with category and ingredients
+interface ProdutoWithExtras extends Produto {
+  categoria?: Categoria;
+  ficha_tecnica?: (FichaTecnica & {
+    ingrediente: Ingrediente;
+  })[];
+}
 
 export default function FichasTecnicas() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentProduto, setCurrentProduto] = useState<Partial<Produto> | null>(null);
   const [ingredientes, setIngredientes] = useState<{id: string, quantidade: number}[]>([]);
 
-  const { data: produtos, isLoading } = useSupabaseQuery<'produtos', Produto[]>(
+  const { data: produtos, isLoading } = useSupabaseQuery<'produtos', ProdutoWithExtras[]>(
     'produtos',
     ['list'],
     { 
-      select: '*, categoria:categoria_id(nome)',
+      select: '*, categoria:categoria_id(*)',
       order: 'nome'
     }
   );
 
-  const { data: categoriasList } = useSupabaseQuery<'categorias', Categoria[]>(
+  const { data: categoriasList } = useSupabaseQuery<'categorias'>(
     'categorias',
     ['list'],
     { order: 'nome' }
   );
 
-  const { data: ingredientesList } = useSupabaseQuery<'ingredientes', Ingrediente[]>(
+  const { data: ingredientesList } = useSupabaseQuery<'ingredientes'>(
     'ingredientes',
     ['list'],
     { order: 'nome' }
@@ -83,7 +80,7 @@ export default function FichasTecnicas() {
     setIsFormOpen(true);
   };
 
-  const handleEditClick = (produto: Produto) => {
+  const handleEditClick = (produto: ProdutoWithExtras) => {
     setCurrentProduto(produto);
     // Fetch ficha técnica for this product
     setIsFormOpen(true);
@@ -156,36 +153,43 @@ export default function FichasTecnicas() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome" as const
+      accessorKey: "nome"
     },
     {
       header: "Categoria",
-      accessorKey: (row: Produto) => row.categoria?.nome || "-"
+      accessorKey: "categoria.nome",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        info.row.original.categoria?.nome || "-"
     },
     {
       header: "Rendimento",
-      accessorKey: "rendimento" as const,
-      cell: (row: Produto) => `${row.rendimento} porções`
+      accessorKey: "rendimento",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        `${info.row.original.rendimento} porções`
     },
     {
       header: "Custo Total",
-      accessorKey: "custo_total_receita" as const,
-      cell: (row: Produto) => formatCurrency(row.custo_total_receita || 0)
+      accessorKey: "custo_total_receita",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        formatCurrency(info.row.original.custo_total_receita || 0)
     },
     {
       header: "Custo por Porção",
-      accessorKey: "custo_por_porcao" as const,
-      cell: (row: Produto) => formatCurrency(row.custo_por_porcao || 0)
+      accessorKey: "custo_por_porcao",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        formatCurrency(info.row.original.custo_por_porcao || 0)
     },
     {
       header: "Preço",
-      accessorKey: "preco_definido" as const,
-      cell: (row: Produto) => formatCurrency(row.preco_definido || 0)
+      accessorKey: "preco_definido",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        formatCurrency(info.row.original.preco_definido || 0)
     },
     {
       header: "Margem",
-      accessorKey: "margem" as const,
-      cell: (row: Produto) => formatarPercentual(row.margem || 0)
+      accessorKey: "margem",
+      cell: (info: { row: { original: ProdutoWithExtras } }) => 
+        formatarPercentual(info.row.original.margem || 0)
     }
   ];
 

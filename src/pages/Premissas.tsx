@@ -7,22 +7,27 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tables } from '@/integrations/supabase/types';
 import { DataTable } from '@/components/ui/data-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, Plus, Settings } from 'lucide-react';
+import { Database } from '@/integrations/supabase/types';
+
+type CapacidadeProdutiva = Database['public']['Tables']['premissas_capacidade_produtiva']['Row'];
+type DespesaFixa = Database['public']['Tables']['premissas_despesas_fixas']['Row'];
+type Markup = Database['public']['Tables']['premissas_markup']['Row'];
+type RegraArredondamento = Database['public']['Tables']['regras_arredondamento']['Row'];
 
 export default function Premissas() {
   const [activeTab, setActiveTab] = useState('capacidade');
 
   // ===================== CAPACIDADE PRODUTIVA =====================
-  const { data: capacidadeProdutiva, isLoading: isLoadingCapacidade } = useSupabaseQuery<Tables<'premissas_capacidade_produtiva'>>(
+  const { data: capacidadeProdutiva, isLoading: isLoadingCapacidade } = useSupabaseQuery<'premissas_capacidade_produtiva'>(
     'premissas_capacidade_produtiva',
     ['capacidade'],
     { single: true }
   );
 
-  const [capacidadeForm, setCapacidadeForm] = useState<Partial<Tables<'premissas_capacidade_produtiva'>>>({
+  const [capacidadeForm, setCapacidadeForm] = useState<Partial<CapacidadeProdutiva>>({
     funcionarios: 0,
     horas_dia: 8,
     dias_mes: 22,
@@ -35,7 +40,7 @@ export default function Premissas() {
     }
   }, [capacidadeProdutiva]);
 
-  const { update: updateCapacidade, insert: insertCapacidade } = useSupabaseMutation<Tables<'premissas_capacidade_produtiva'>>(
+  const { update: updateCapacidade, insert: insertCapacidade } = useSupabaseMutation<'premissas_capacidade_produtiva'>(
     'premissas_capacidade_produtiva',
     {
       onSuccessMessage: 'Capacidade produtiva salva com sucesso!',
@@ -55,19 +60,19 @@ export default function Premissas() {
   };
 
   // ===================== DESPESAS FIXAS =====================
-  const { data: despesasFixas, isLoading: isLoadingDespesas } = useSupabaseQuery<Tables<'premissas_despesas_fixas'>[]>(
+  const { data: despesasFixas, isLoading: isLoadingDespesas } = useSupabaseQuery<'premissas_despesas_fixas'>(
     'premissas_despesas_fixas',
     ['despesas'],
     { order: 'nome_despesa' }
   );
 
-  const [novaDespesa, setNovaDespesa] = useState<Partial<Tables<'premissas_despesas_fixas'>>>({
+  const [novaDespesa, setNovaDespesa] = useState<Partial<DespesaFixa>>({
     nome_despesa: '',
     tipo: 'Aluguel',
     valor: 0
   });
 
-  const { insert: insertDespesa, remove: deleteDespesa } = useSupabaseMutation<Tables<'premissas_despesas_fixas'>>(
+  const { insert: insertDespesa, remove: deleteDespesa } = useSupabaseMutation<'premissas_despesas_fixas'>(
     'premissas_despesas_fixas',
     {
       onSuccessMessage: 'Despesa salva com sucesso!',
@@ -81,7 +86,7 @@ export default function Premissas() {
     setNovaDespesa({ nome_despesa: '', tipo: 'Aluguel', valor: 0 });
   };
 
-  const handleDeleteDespesa = async (despesa: Tables<'premissas_despesas_fixas'>) => {
+  const handleDeleteDespesa = async (despesa: DespesaFixa) => {
     if (window.confirm(`Deseja realmente excluir a despesa "${despesa.nome_despesa}"?`)) {
       await deleteDespesa(despesa.id);
     }
@@ -99,18 +104,18 @@ export default function Premissas() {
     {
       header: "Valor Mensal",
       accessorKey: "valor",
-      cell: (row: Tables<'premissas_despesas_fixas'>) => formatCurrency(row.valor)
+      cell: (info: { row: { original: DespesaFixa } }) => formatCurrency(info.row.original.valor)
     }
   ];
 
   // ===================== MARKUP =====================
-  const { data: markup, isLoading: isLoadingMarkup } = useSupabaseQuery<Tables<'premissas_markup'>>(
+  const { data: markup, isLoading: isLoadingMarkup } = useSupabaseQuery<'premissas_markup'>(
     'premissas_markup',
     ['markup'],
     { single: true }
   );
 
-  const [markupForm, setMarkupForm] = useState<Partial<Tables<'premissas_markup'>>>({
+  const [markupForm, setMarkupForm] = useState<Partial<Markup>>({
     percentual_custos_fixos: 0.3,
     percentual_impostos: 0.09,
     percentual_delivery: 0.15,
@@ -125,7 +130,7 @@ export default function Premissas() {
     }
   }, [markup]);
 
-  const { update: updateMarkup, insert: insertMarkup } = useSupabaseMutation<Tables<'premissas_markup'>>(
+  const { update: updateMarkup, insert: insertMarkup } = useSupabaseMutation<'premissas_markup'>(
     'premissas_markup',
     {
       onSuccessMessage: 'Markup salvo com sucesso!',
@@ -145,19 +150,19 @@ export default function Premissas() {
   };
 
   // ===================== REGRAS DE ARREDONDAMENTO =====================
-  const { data: regrasArredondamento, isLoading: isLoadingRegras } = useSupabaseQuery<Tables<'regras_arredondamento'>[]>(
+  const { data: regrasArredondamento, isLoading: isLoadingRegras } = useSupabaseQuery<'regras_arredondamento'>(
     'regras_arredondamento',
     ['regras'],
     { order: 'nome' }
   );
 
-  const [novaRegra, setNovaRegra] = useState<Partial<Tables<'regras_arredondamento'>>>({
+  const [novaRegra, setNovaRegra] = useState<Partial<RegraArredondamento>>({
     nome: '',
     descricao: '',
     logica: ''
   });
 
-  const { insert: insertRegra, remove: deleteRegra } = useSupabaseMutation<Tables<'regras_arredondamento'>>(
+  const { insert: insertRegra, remove: deleteRegra } = useSupabaseMutation<'regras_arredondamento'>(
     'regras_arredondamento',
     {
       onSuccessMessage: 'Regra salva com sucesso!',
@@ -171,7 +176,7 @@ export default function Premissas() {
     setNovaRegra({ nome: '', descricao: '', logica: '' });
   };
 
-  const handleDeleteRegra = async (regra: Tables<'regras_arredondamento'>) => {
+  const handleDeleteRegra = async (regra: RegraArredondamento) => {
     if (window.confirm(`Deseja realmente excluir a regra "${regra.nome}"?`)) {
       await deleteRegra(regra.id);
     }
@@ -191,6 +196,10 @@ export default function Premissas() {
       accessorKey: "logica"
     }
   ];
+
+  const calculatedTotalDespesas = React.useMemo(() => {
+    return despesasFixas?.reduce((sum, despesa) => sum + (despesa.valor || 0), 0) || 0;
+  }, [despesasFixas]);
 
   return (
     <>
@@ -359,7 +368,7 @@ export default function Premissas() {
                 <div className="pt-4 text-right">
                   <p className="font-medium">Total de Despesas Fixas: 
                     <span className="ml-2 font-bold">
-                      {formatCurrency(despesasFixas?.reduce((sum, despesa) => sum + (despesa.valor || 0), 0) || 0)}
+                      {formatCurrency(calculatedTotalDespesas)}
                     </span>
                   </p>
                 </div>

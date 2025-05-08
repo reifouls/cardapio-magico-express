@@ -9,37 +9,34 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tables } from '@/integrations/supabase/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Plus, Save } from 'lucide-react';
+import { Database } from '@/integrations/supabase/types';
 
 // Define proper types for our Combo data
-type Combo = Tables<'combos'> & {
-  produtos?: {
-    produto: {
-      id: string;
-      nome: string;
-      custo_por_porcao: number;
-      preco_definido: number;
-    };
-    quantidade: number;
-  }[];
+type Combo = Database['public']['Tables']['combos']['Row'];
+type Produto = Database['public']['Tables']['produtos']['Row'];
+type ComboProduto = Database['public']['Tables']['combo_produtos']['Row'] & {
+  produto?: Produto;
 };
 
-type Produto = Tables<'produtos'>;
+// Extended Combo with products
+interface ComboWithProducts extends Combo {
+  produtos?: ComboProduto[];
+}
 
 export default function Combos() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentCombo, setCurrentCombo] = useState<Partial<Combo> | null>(null);
   const [produtosCombo, setProdutosCombo] = useState<{id: string, quantidade: number}[]>([]);
 
-  const { data: combos, isLoading } = useSupabaseQuery<'combos', Combo[]>(
+  const { data: combos, isLoading } = useSupabaseQuery<'combos', ComboWithProducts[]>(
     'combos',
     ['list'],
     { order: 'nome' }
   );
 
-  const { data: produtosList } = useSupabaseQuery<'produtos', Produto[]>(
+  const { data: produtosList } = useSupabaseQuery<'produtos'>(
     'produtos',
     ['list'],
     { 
@@ -77,14 +74,14 @@ export default function Combos() {
     setIsFormOpen(true);
   };
 
-  const handleEditClick = (combo: Combo) => {
+  const handleEditClick = (combo: ComboWithProducts) => {
     setCurrentCombo(combo);
     // TODO: Fetch combo products
     setProdutosCombo([]);
     setIsFormOpen(true);
   };
 
-  const handleDeleteClick = async (combo: Combo) => {
+  const handleDeleteClick = async (combo: ComboWithProducts) => {
     if (window.confirm(`Deseja realmente excluir o combo "${combo.nome}"?`)) {
       await deleteCombo(combo.id);
     }
@@ -192,22 +189,25 @@ export default function Combos() {
   const columns = [
     {
       header: "Nome",
-      accessorKey: "nome" as const
+      accessorKey: "nome"
     },
     {
       header: "Custo Total",
-      accessorKey: "custo_total" as const,
-      cell: (row: Combo) => formatCurrency(row.custo_total || 0)
+      accessorKey: "custo_total",
+      cell: (info: { row: { original: ComboWithProducts } }) => 
+        formatCurrency(info.row.original.custo_total || 0)
     },
     {
       header: "Preço Total",
-      accessorKey: "preco_total" as const,
-      cell: (row: Combo) => formatCurrency(row.preco_total)
+      accessorKey: "preco_total",
+      cell: (info: { row: { original: ComboWithProducts } }) => 
+        formatCurrency(info.row.original.preco_total)
     },
     {
       header: "Margem",
-      accessorKey: "margem_combo" as const,
-      cell: (row: Combo) => formatarPercentual(row.margem_combo || 0)
+      accessorKey: "margem_combo",
+      cell: (info: { row: { original: ComboWithProducts } }) => 
+        formatarPercentual(info.row.original.margem_combo || 0)
     }
   ];
 
