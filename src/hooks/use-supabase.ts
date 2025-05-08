@@ -6,15 +6,12 @@ import { toast } from '@/components/ui/sonner';
 import { Database } from '@/integrations/supabase/types';
 
 // Define table names as literal types for better type safety
-type TableName = keyof Database['public']['Tables'];
+type TableNames = keyof Database['public']['Tables'];
 
 /**
  * Hook for querying data from Supabase with strong typing
  */
-export function useSupabaseQuery<
-  T extends TableName,
-  ReturnType = Database['public']['Tables'][T]['Row'][]
->(
+export function useSupabaseQuery<T extends TableNames, ReturnType = Database['public']['Tables'][T]['Row'][]>(
   tableName: T,
   queryKey: string[],
   options?: {
@@ -28,10 +25,8 @@ export function useSupabaseQuery<
   return useQuery({
     queryKey: [tableName, ...queryKey],
     queryFn: async () => {
-      // Need to use type assertion here since supabase.from expects a string
-      // but we're using a typed TableName
       let query = supabase
-        .from(tableName as string)
+        .from(tableName)
         .select(options?.select || '*');
 
       if (options?.filter) {
@@ -69,7 +64,7 @@ export function useSupabaseQuery<
 /**
  * Hook for mutations (insert, update, delete) to Supabase tables with strong typing
  */
-export function useSupabaseMutation<T extends TableName>(
+export function useSupabaseMutation<T extends TableNames>(
   tableName: T,
   options?: {
     onSuccessMessage?: string;
@@ -77,14 +72,16 @@ export function useSupabaseMutation<T extends TableName>(
     queryKeyToInvalidate?: string[];
   }
 ) {
+  type InsertType = Database['public']['Tables'][T]['Insert'];
+  type UpdateType = Database['public']['Tables'][T]['Update'];
   const queryClient = useQueryClient();
   
   // Insert mutation
   const insertMutation = useMutation({
-    mutationFn: async (newData: Partial<Database['public']['Tables'][T]['Insert']>) => {
+    mutationFn: async (newData: InsertType) => {
       const { data, error } = await supabase
-        .from(tableName as string)
-        .insert(newData as any)
+        .from(tableName)
+        .insert(newData)
         .select();
 
       if (error) {
@@ -114,12 +111,12 @@ export function useSupabaseMutation<T extends TableName>(
       data 
     }: { 
       id: string; 
-      data: Partial<Database['public']['Tables'][T]['Update']> 
+      data: UpdateType 
     }) => {
       const { data: responseData, error } = await supabase
-        .from(tableName as string)
-        .update(data as any)
-        .eq('id', id)
+        .from(tableName)
+        .update(data)
+        .eq('id', id as any) // Using 'as any' to bypass strict type checking for the id column
         .select();
 
       if (error) {
@@ -146,9 +143,9 @@ export function useSupabaseMutation<T extends TableName>(
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from(tableName as string)
+        .from(tableName)
         .delete()
-        .eq('id', id);
+        .eq('id', id as any); // Using 'as any' to bypass strict type checking for the id column
 
       if (error) {
         console.error('Erro ao excluir dados:', error);
@@ -184,7 +181,7 @@ export function useSupabaseMutation<T extends TableName>(
 /**
  * Hook for selecting options from a table column, formatted for dropdowns
  */
-export function useSupabaseSelect<T extends TableName>(
+export function useSupabaseSelect<T extends TableNames>(
   tableName: T,
   column: string,
   queryKey: string[]
@@ -193,7 +190,7 @@ export function useSupabaseSelect<T extends TableName>(
     queryKey: [tableName, 'select', ...queryKey],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from(tableName as string)
+        .from(tableName)
         .select(`id, ${column}`)
         .order(column);
 

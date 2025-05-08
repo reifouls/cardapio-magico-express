@@ -11,13 +11,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash } from 'lucide-react';
 
-interface Column<T> {
+export interface Column<T> {
   header: string;
   accessorKey: keyof T | string;
   cell?: (info: { row: { original: T } }) => React.ReactNode;
 }
 
-interface DataTableProps<T> {
+export interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   onEdit?: (row: T) => void;

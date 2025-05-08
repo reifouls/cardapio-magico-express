@@ -36,6 +36,7 @@ export default function Premissas() {
 
   React.useEffect(() => {
     if (capacidadeProdutiva) {
+      // Handle data correctly - capacidadeProdutiva is now a single object, not array
       setCapacidadeForm(capacidadeProdutiva);
     }
   }, [capacidadeProdutiva]);
@@ -126,6 +127,7 @@ export default function Premissas() {
 
   React.useEffect(() => {
     if (markup) {
+      // Handle data correctly - markup is now a single object, not array
       setMarkupForm(markup);
     }
   }, [markup]);
