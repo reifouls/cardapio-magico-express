@@ -25,7 +25,11 @@ interface ProdutoWithExtras extends Produto {
 export default function Engenharia() {
   const [activeTab, setActiveTab] = useState('tabela');
 
-  const { data: produtos, isLoading } = useSupabaseQuery<'produtos', ProdutoWithExtras[]>(
+  const { data: produtos, isLoading } = useSupabaseQuery<
+    'produtos', 
+    false,
+    ProdutoWithExtras[]
+  >(
     'produtos',
     ['engenharia'],
     { 

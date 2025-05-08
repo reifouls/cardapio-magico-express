@@ -5,16 +5,18 @@ import { toast } from '@/components/ui/sonner';
 import { Database } from '@/integrations/supabase/types';
 import { TableNames } from './use-supabase-query';
 
+type MutationOptions = {
+  onSuccessMessage?: string;
+  onErrorMessage?: string;
+  queryKeyToInvalidate?: string[];
+};
+
 /**
  * Hook for mutations (insert, update, delete) to Supabase tables with strong typing
  */
 export function useSupabaseMutation<T extends TableNames>(
   tableName: T,
-  options?: {
-    onSuccessMessage?: string;
-    onErrorMessage?: string;
-    queryKeyToInvalidate?: string[];
-  }
+  options?: MutationOptions
 ) {
   const queryClient = useQueryClient();
   
@@ -23,7 +25,7 @@ export function useSupabaseMutation<T extends TableNames>(
     mutationFn: async (newData: Database['public']['Tables'][T]['Insert']) => {
       const { data, error } = await supabase
         .from(tableName)
-        .insert(newData)
+        .insert(newData as any) // Type cast needed due to Supabase client limitations
         .select();
 
       if (error) {
@@ -57,8 +59,8 @@ export function useSupabaseMutation<T extends TableNames>(
     }) => {
       const { data: responseData, error } = await supabase
         .from(tableName)
-        .update(data)
-        .eq('id', id)
+        .update(data as any) // Type cast needed due to Supabase client limitations
+        .eq('id' as any, id) // Type cast needed due to Supabase client limitations
         .select();
 
       if (error) {
@@ -87,7 +89,7 @@ export function useSupabaseMutation<T extends TableNames>(
       const { error } = await supabase
         .from(tableName)
         .delete()
-        .eq('id', id);
+        .eq('id' as any, id); // Type cast needed due to Supabase client limitations
 
       if (error) {
         console.error('Error deleting data:', error);

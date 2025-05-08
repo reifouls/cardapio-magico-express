@@ -23,7 +23,8 @@ export default function Premissas() {
   // ===================== CAPACIDADE PRODUTIVA =====================
   const { data: capacidadeProdutiva, isLoading: isLoadingCapacidade } = useSupabaseQuery<
     'premissas_capacidade_produtiva',
-    true
+    true,
+    CapacidadeProdutiva | null
   >(
     'premissas_capacidade_produtiva',
     ['capacidade'],
@@ -73,7 +74,11 @@ export default function Premissas() {
   };
 
   // ===================== DESPESAS FIXAS =====================
-  const { data: despesasFixas, isLoading: isLoadingDespesas } = useSupabaseQuery<'premissas_despesas_fixas', DespesaFixa[]>(
+  const { data: despesasFixas, isLoading: isLoadingDespesas } = useSupabaseQuery<
+    'premissas_despesas_fixas',
+    false,
+    DespesaFixa[]
+  >(
     'premissas_despesas_fixas',
     ['despesas'],
     { order: 'nome_despesa' }
@@ -128,7 +133,8 @@ export default function Premissas() {
   // ===================== MARKUP =====================
   const { data: markup, isLoading: isLoadingMarkup } = useSupabaseQuery<
     'premissas_markup',
-    true
+    true,
+    Markup | null
   >(
     'premissas_markup',
     ['markup'],
@@ -184,7 +190,11 @@ export default function Premissas() {
   };
 
   // ===================== REGRAS DE ARREDONDAMENTO =====================
-  const { data: regrasArredondamento, isLoading: isLoadingRegras } = useSupabaseQuery<'regras_arredondamento', RegraArredondamento[]>(
+  const { data: regrasArredondamento, isLoading: isLoadingRegras } = useSupabaseQuery<
+    'regras_arredondamento',
+    false,
+    RegraArredondamento[]
+  >(
     'regras_arredondamento',
     ['regras'],
     { order: 'nome' }

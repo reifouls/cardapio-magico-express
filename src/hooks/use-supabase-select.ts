@@ -4,6 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { TableNames } from './use-supabase-query';
 
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
 /**
  * Hook for selecting options from a table column, formatted for dropdowns
  */
@@ -26,10 +31,10 @@ export function useSupabaseSelect<T extends TableNames>(
         throw error;
       }
 
-      return data.map((item: any) => ({
+      return data.map((item) => ({
         value: item.id,
         label: item[column]
-      }));
+      })) as SelectOption[];
     },
   });
 }

@@ -32,7 +32,11 @@ export default function FichasTecnicas() {
   const [currentProduto, setCurrentProduto] = useState<Partial<Produto> | null>(null);
   const [ingredientes, setIngredientes] = useState<{id: string, quantidade: number}[]>([]);
 
-  const { data: produtos, isLoading } = useSupabaseQuery<'produtos', ProdutoWithExtras[]>(
+  const { data: produtos, isLoading } = useSupabaseQuery<
+    'produtos',
+    false,
+    ProdutoWithExtras[]
+  >(
     'produtos',
     ['list'],
     { 
@@ -41,13 +45,21 @@ export default function FichasTecnicas() {
     }
   );
 
-  const { data: categoriasList } = useSupabaseQuery<'categorias'>(
+  const { data: categoriasList } = useSupabaseQuery<
+    'categorias',
+    false,
+    Categoria[]
+  >(
     'categorias',
     ['list'],
     { order: 'nome' }
   );
 
-  const { data: ingredientesList } = useSupabaseQuery<'ingredientes'>(
+  const { data: ingredientesList } = useSupabaseQuery<
+    'ingredientes',
+    false,
+    Ingrediente[]
+  >(
     'ingredientes',
     ['list'],
     { order: 'nome' }
