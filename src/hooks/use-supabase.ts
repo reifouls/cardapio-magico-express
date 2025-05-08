@@ -6,23 +6,7 @@ import { toast } from '@/components/ui/sonner';
 import { Tables } from '@/integrations/supabase/types';
 
 // Define valid table names from the database schema
-type TableNames = 
-  | 'produtos' 
-  | 'ingredientes' 
-  | 'categorias' 
-  | 'ficha_tecnica' 
-  | 'combos' 
-  | 'combo_produtos' 
-  | 'vendas' 
-  | 'popularidade' 
-  | 'sugestoes' 
-  | 'premissas_preco' 
-  | 'regras_arredondamento' 
-  | 'premissas_despesas_fixas' 
-  | 'premissas_capacidade_produtiva' 
-  | 'premissas_custo_hora' 
-  | 'premissas_markup' 
-  | 'Emails_lp_bussola';
+type TableNames = keyof Tables;
 
 export function useSupabaseQuery<T>(
   table: TableNames,

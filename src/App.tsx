@@ -6,6 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/layout";
 import HomePage from "./pages/HomePage";
+import FichasTecnicas from "./pages/FichasTecnicas";
+import Ingredientes from "./pages/Ingredientes";
+import Combos from "./pages/Combos";
+import Engenharia from "./pages/Engenharia";
+import Premissas from "./pages/Premissas";
+import Relatorios from "./pages/Relatorios";
+import ImportarExportar from "./pages/ImportarExportar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,7 +26,13 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
-            {/* Outras rotas serão adicionadas aqui */}
+            <Route path="fichas-tecnicas" element={<FichasTecnicas />} />
+            <Route path="ingredientes" element={<Ingredientes />} />
+            <Route path="combos" element={<Combos />} />
+            <Route path="engenharia" element={<Engenharia />} />
+            <Route path="premissas" element={<Premissas />} />
+            <Route path="relatorios" element={<Relatorios />} />
+            <Route path="importar-exportar" element={<ImportarExportar />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
