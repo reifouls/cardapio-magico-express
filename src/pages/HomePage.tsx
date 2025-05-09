@@ -232,22 +232,38 @@ export default function HomePage() {
         .limit(1);
 
       // Tentar obter produto mais vendido
-      const { data: vendasAgregadas } = await supabase
+      // Fix: Change the supabase query to properly aggregate the data without using group
+      const { data: vendasData } = await supabase
         .from("vendas")
-        .select(`
-          produto_id,
-          quantidade_total:quantidade(sum),
-          produtos(nome)
-        `)
-        .not("produto_id", "is", null)
-        .group("produto_id, produtos(nome)")
-        .order("quantidade_total", { ascending: false })
-        .limit(1);
+        .select(`produto_id, quantidade, produtos(nome)`)
+        .not("produto_id", "is", null);
+        
+      // Handle aggregation in JavaScript instead
+      const vendasPorProduto = {};
+      if (vendasData) {
+        vendasData.forEach(venda => {
+          if (!vendasPorProduto[venda.produto_id]) {
+            vendasPorProduto[venda.produto_id] = {
+              produto_id: venda.produto_id,
+              quantidade_total: 0,
+              produtos: venda.produtos
+            };
+          }
+          vendasPorProduto[venda.produto_id].quantidade_total += venda.quantidade;
+        });
+      }
+      
+      // Convert to array and find highest quantity
+      const vendasAgregadas = Object.values(vendasPorProduto);
+      const maisVendido = vendasAgregadas.length > 0 ?
+        vendasAgregadas.reduce((max, current) => 
+          max.quantidade_total > current.quantidade_total ? max : current
+        , vendasAgregadas[0]) : null;
       
       return {
         maiorMargem: maiorMargemData?.[0] || null,
         menorMargem: menorMargemData?.[0] || null,
-        maisVendido: vendasAgregadas?.[0] || null
+        maisVendido: maisVendido
       };
     }
   });

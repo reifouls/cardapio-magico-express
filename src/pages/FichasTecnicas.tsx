@@ -110,8 +110,24 @@ export default function FichasTecnicas() {
       
       // Complete the save function
       if (!produtoId) {
-        // Insert new produto
-        const newProduto = await insertProduto(currentProduto);
+        // Insert new produto - Fix here: Check if nome exists and rendimento is set
+        if (!currentProduto.nome || !currentProduto.rendimento) {
+          return; // Don't proceed if required fields are missing
+        }
+        
+        const produtoToInsert = {
+          nome: currentProduto.nome,
+          rendimento: currentProduto.rendimento,
+          tipo: currentProduto.tipo || 'Produto',
+          categoria_id: currentProduto.categoria_id,
+          custo_total_receita: currentProduto.custo_total_receita,
+          custo_por_porcao: currentProduto.custo_por_porcao,
+          preco_definido: currentProduto.preco_definido,
+          preco_sugerido: currentProduto.preco_sugerido,
+          margem: currentProduto.margem
+        };
+        
+        const newProduto = await insertProduto(produtoToInsert);
         produtoId = newProduto?.[0]?.id;
       } else {
         // Update existing produto
@@ -121,7 +137,7 @@ export default function FichasTecnicas() {
         });
         
         // Remove existing ficha_tecnica entries
-        await removeFichaTecnica({ column: 'produto_id', value: produtoId });
+        await removeFichaTecnica('produto_id', produtoId);
       }
 
       // Insert or update ficha_tecnica entries

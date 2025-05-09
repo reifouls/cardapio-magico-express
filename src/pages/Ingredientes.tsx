@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Save, Search } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { Database } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client'; // Add missing import
 
 type Ingrediente = Database['public']['Tables']['ingredientes']['Row'] & {
   sequencial?: number;
