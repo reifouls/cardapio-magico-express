@@ -1,17 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataTable } from '@/components/ui/data-table';
 import { formatCurrency, formatarPercentual } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Plus, Save } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Database } from '@/integrations/supabase/types';
+import FichaTecnicaForm from '@/components/fichas-tecnicas/FichaTecnicaForm';
 
 // Define proper types for our data
 type Produto = Database['public']['Tables']['produtos']['Row'];
@@ -31,9 +27,6 @@ export default function FichasTecnicas() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentProduto, setCurrentProduto] = useState<Partial<Produto> | null>(null);
   const [ingredientes, setIngredientes] = useState<{id: string, quantidade: number}[]>([]);
-  const [custoTotal, setCustoTotal] = useState(0);
-  const [custoPorPorcao, setCustoPorPorcao] = useState(0);
-  const [precoSugerido, setPrecoSugerido] = useState(0);
 
   const { data: produtos, isLoading } = useSupabaseQuery<
     'produtos',
@@ -48,33 +41,6 @@ export default function FichasTecnicas() {
     }
   );
 
-  const { data: categoriasList } = useSupabaseQuery<
-    'categorias',
-    false,
-    Categoria[]
-  >(
-    'categorias',
-    ['list'],
-    { order: 'nome' }
-  );
-
-  const { data: ingredientesList } = useSupabaseQuery<
-    'ingredientes',
-    false,
-    Ingrediente[]
-  >(
-    'ingredientes',
-    ['list'],
-    { order: 'nome' }
-  );
-
-  const { data: markup } = useSupabaseQuery(
-    'premissas_markup',
-    ['markup'],
-    { single: true }
-  );
-
-  // Fixed the function call by removing the 4th argument and using options object properly
   const { data: fichaTecnica, refetch: refetchFichaTecnica } = useSupabaseQuery<
     'ficha_tecnica',
     false,
@@ -107,7 +73,7 @@ export default function FichasTecnicas() {
   );
 
   // Load ficha_tecnica when editing
-  useEffect(() => {
+  React.useEffect(() => {
     if (fichaTecnica && fichaTecnica.length > 0 && currentProduto?.id) {
       // Map ficha_tecnica to ingredientes state format
       setIngredientes(
@@ -116,53 +82,8 @@ export default function FichasTecnicas() {
           quantidade: item.quantidade_utilizada
         }))
       );
-
-      // Calculate costs
-      calculateCustos(fichaTecnica, currentProduto.rendimento || 1);
     }
   }, [fichaTecnica, currentProduto]);
-
-  const calculateCustos = (fichaItems: (FichaTecnica & {ingrediente: Ingrediente})[], rendimento: number) => {
-    // Calculate total cost
-    const total = fichaItems.reduce((sum, item) => {
-      return sum + (item.quantidade_utilizada * item.ingrediente.custo_unitario);
-    }, 0);
-    
-    setCustoTotal(total);
-    
-    // Calculate cost per portion
-    const porPorcao = total / rendimento;
-    setCustoPorPorcao(porPorcao);
-    
-    // Calculate suggested price based on markup
-    if (markup && markup.markup_ponderado) {
-      const sugerido = porPorcao * markup.markup_ponderado;
-      setPrecoSugerido(sugerido);
-    }
-  };
-
-  // Calculate costs when ingredients or rendimiento change
-  useEffect(() => {
-    if (ingredientesList && ingredientes.length > 0) {
-      // Fix the type issue by adding missing properties (created_at, id)
-      const fichaItems = ingredientes.map(item => {
-        const ing = ingredientesList.find(i => i.id === item.id);
-        if (ing) {
-          return {
-            id: '', // Providing a default empty id
-            created_at: new Date().toISOString(), // Providing a default created_at
-            ingrediente_id: item.id,
-            produto_id: currentProduto?.id || '',
-            quantidade_utilizada: item.quantidade,
-            ingrediente: ing
-          };
-        }
-        return null;
-      }).filter(Boolean) as (FichaTecnica & { ingrediente: Ingrediente })[];
-      
-      calculateCustos(fichaItems, currentProduto?.rendimento || 1);
-    }
-  }, [ingredientes, ingredientesList, currentProduto?.rendimento]);
 
   const handleNewClick = () => {
     setCurrentProduto({
@@ -171,26 +92,14 @@ export default function FichasTecnicas() {
       tipo: 'Produto',
     });
     setIngredientes([]);
-    setCustoTotal(0);
-    setCustoPorPorcao(0);
-    setPrecoSugerido(0);
     setIsFormOpen(true);
   };
 
   const handleEditClick = (produto: ProdutoWithExtras) => {
     setCurrentProduto(produto);
+    setIngredientes([]);
     refetchFichaTecnica();
     setIsFormOpen(true);
-  };
-
-  const handleAddIngrediente = () => {
-    if (ingredientesList && ingredientesList.length > 0) {
-      setIngredientes([...ingredientes, { id: ingredientesList[0].id, quantidade: 0 }]);
-    }
-  };
-
-  const handleRemoveIngrediente = (index: number) => {
-    setIngredientes(ingredientes.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
@@ -199,34 +108,20 @@ export default function FichasTecnicas() {
     try {
       let produtoId = currentProduto.id;
       
-      // Prepare values for custo_total e custo_por_porcao
-      const produtoData = {
-        nome: currentProduto.nome,
-        categoria_id: currentProduto.categoria_id,
-        rendimento: currentProduto.rendimento,
-        tipo: currentProduto.tipo,
-        preco_definido: currentProduto.preco_definido,
-        custo_total_receita: custoTotal,
-        custo_por_porcao: custoPorPorcao,
-        preco_sugerido: precoSugerido,
-        margem: currentProduto.preco_definido 
-          ? (currentProduto.preco_definido - custoPorPorcao) / currentProduto.preco_definido 
-          : (precoSugerido - custoPorPorcao) / precoSugerido
-      };
-      
+      // Complete the save function
       if (!produtoId) {
         // Insert new produto
-        const newProduto = await insertProduto(produtoData);
+        const newProduto = await insertProduto(currentProduto);
         produtoId = newProduto?.[0]?.id;
       } else {
         // Update existing produto
         await updateProduto({
           id: produtoId,
-          data: produtoData
+          data: currentProduto
         });
         
-        // Fix: Pass the correct parameter type to removeFichaTecnica
-        await removeFichaTecnica('produto_id', produtoId);
+        // Remove existing ficha_tecnica entries
+        await removeFichaTecnica({ column: 'produto_id', value: produtoId });
       }
 
       // Insert or update ficha_tecnica entries
@@ -325,167 +220,13 @@ export default function FichasTecnicas() {
             </SheetTitle>
           </SheetHeader>
           
-          <div className="grid gap-6 py-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome do Produto</Label>
-                <Input
-                  id="nome"
-                  value={currentProduto?.nome || ''}
-                  onChange={(e) => setCurrentProduto({...currentProduto!, nome: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="categoria">Categoria</Label>
-                <Select 
-                  value={currentProduto?.categoria_id || ''} 
-                  onValueChange={(value) => setCurrentProduto({...currentProduto!, categoria_id: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoriasList?.map((categoria) => (
-                      <SelectItem key={categoria.id} value={categoria.id}>
-                        {categoria.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="rendimento">Rendimento (porções)</Label>
-                <Input
-                  id="rendimento"
-                  type="number"
-                  min="1"
-                  value={currentProduto?.rendimento || 1}
-                  onChange={(e) => setCurrentProduto(
-                    {...currentProduto!, rendimento: parseInt(e.target.value) || 1}
-                  )}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="preco">Preço de Venda (opcional)</Label>
-                <Input
-                  id="preco"
-                  type="number"
-                  step="0.01"
-                  value={currentProduto?.preco_definido || ''}
-                  onChange={(e) => setCurrentProduto(
-                    {...currentProduto!, preco_definido: parseFloat(e.target.value) || undefined}
-                  )}
-                />
-                {precoSugerido > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Preço sugerido: {formatCurrency(precoSugerido)}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Custo Total da Receita</Label>
-                <Input
-                  type="text"
-                  value={formatCurrency(custoTotal)}
-                  readOnly
-                  className="bg-gray-50"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Custo por Porção</Label>
-                <Input
-                  type="text"
-                  value={formatCurrency(custoPorPorcao)}
-                  readOnly
-                  className="bg-gray-50"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Margem Estimada</Label>
-                <Input
-                  type="text"
-                  value={formatarPercentual(
-                    currentProduto?.preco_definido 
-                      ? (currentProduto.preco_definido - custoPorPorcao) / currentProduto.preco_definido 
-                      : (precoSugerido - custoPorPorcao) / precoSugerido
-                  )}
-                  readOnly
-                  className="bg-gray-50"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Ingredientes</h3>
-                <Button type="button" onClick={handleAddIngrediente} variant="outline" size="sm">
-                  <Plus className="w-4 h-4 mr-1" /> Adicionar Ingrediente
-                </Button>
-              </div>
-
-              {ingredientes.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nenhum ingrediente adicionado.</p>
-              )}
-
-              {ingredientes.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <Select 
-                      value={item.id} 
-                      onValueChange={(value) => {
-                        const newIngredientes = [...ingredientes];
-                        newIngredientes[index].id = value;
-                        setIngredientes(newIngredientes);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ingredientesList?.map((ing) => (
-                          <SelectItem key={ing.id} value={ing.id}>
-                            {ing.nome} ({ing.unidade})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.quantidade}
-                      onChange={(e) => {
-                        const newIngredientes = [...ingredientes];
-                        newIngredientes[index].quantidade = parseFloat(e.target.value) || 0;
-                        setIngredientes(newIngredientes);
-                      }}
-                    />
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleRemoveIngrediente(index)}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <SheetFooter>
-            <Button onClick={handleSave} className="w-full">
-              <Save className="mr-2 h-4 w-4" />
-              Salvar Ficha Técnica
-            </Button>
-          </SheetFooter>
+          <FichaTecnicaForm 
+            currentProduto={currentProduto}
+            setCurrentProduto={setCurrentProduto}
+            ingredientes={ingredientes}
+            setIngredientes={setIngredientes}
+            onSave={handleSave}
+          />
         </SheetContent>
       </Sheet>
     </>

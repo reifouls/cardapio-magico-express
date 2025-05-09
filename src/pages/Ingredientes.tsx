@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Search } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
 import { Database } from '@/integrations/supabase/types';
 
 type Ingrediente = Database['public']['Tables']['ingredientes']['Row'] & {
@@ -63,6 +64,16 @@ export default function Ingredientes() {
     );
   }, [ingredientesWithSequential, searchTerm]);
 
+  // Verificar se o ingrediente está em uso em alguma ficha técnica
+  const verificarUsoIngrediente = async (ingredienteId: string) => {
+    const { count } = await supabase
+      .from('ficha_tecnica')
+      .select('*', { count: 'exact', head: true })
+      .eq('ingrediente_id', ingredienteId);
+      
+    return count && count > 0;
+  };
+
   const handleNewClick = () => {
     setCurrentIngrediente({
       nome: '',
@@ -80,6 +91,17 @@ export default function Ingredientes() {
   };
 
   const handleDeleteClick = async (ingrediente: Ingrediente) => {
+    // Verificar se o ingrediente está em uso
+    const emUso = await verificarUsoIngrediente(ingrediente.id);
+    
+    if (emUso) {
+      toast.error(`Ingrediente "${ingrediente.nome}" em uso - exclusão bloqueada`, {
+        description: "Este ingrediente está sendo usado em uma ou mais fichas técnicas."
+      });
+      return;
+    }
+    
+    // Se não estiver em uso, confirmar e deletar
     if (window.confirm(`Deseja realmente excluir o ingrediente "${ingrediente.nome}"?`)) {
       await deleteIngrediente(ingrediente.id);
     }

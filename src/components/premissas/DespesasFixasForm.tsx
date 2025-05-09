@@ -1,13 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { DataTable } from '@/components/ui/data-table';
 import { formatCurrency } from "@/lib/utils";
-import { Plus } from 'lucide-react';
+import { Plus, PieChart } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ResponsiveContainer, PieChart as PieChartRecharts, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 // Define proper types
 type DespesaFixa = {
@@ -17,12 +21,24 @@ type DespesaFixa = {
   valor: number;
 };
 
+const CATEGORIAS_DESPESAS = [
+  { value: 'Custos de Ocupação', label: 'Custos de Ocupação' },
+  { value: 'Custos de Pessoas', label: 'Custos de Pessoas' },
+  { value: 'Despesas Administrativas', label: 'Despesas Administrativas' },
+  { value: 'Despesas Financeiras', label: 'Despesas Financeiras' }
+];
+
+const COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#3b82f6'];
+
 export default function DespesasFixasForm() {
   const [novaDespesa, setNovaDespesa] = useState<Partial<DespesaFixa>>({
     nome_despesa: '',
     tipo: 'Custos de Ocupação',
     valor: 0
   });
+  
+  const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
+  const [detalhesAbertos, setDetalhesAbertos] = useState(false);
 
   const { data: despesasFixas, isLoading: isLoadingDespesas } = useSupabaseQuery<
     'premissas_despesas_fixas',
@@ -74,14 +90,56 @@ export default function DespesasFixasForm() {
     }
   ];
 
-  const tiposDespesas = [
-    { value: 'Custos de Ocupação', label: 'Custos de Ocupação' },
-    { value: 'Custos de Pessoas', label: 'Custos de Pessoas' },
-    { value: 'Despesas Administrativas', label: 'Despesas Administrativas' },
-    { value: 'Despesas Financeiras', label: 'Despesas Financeiras' }
-  ];
+  // Agrupar despesas por categoria e calcular totais
+  const despesasPorCategoria = useMemo(() => {
+    if (!despesasFixas || despesasFixas.length === 0) return [];
+    
+    const categorias = CATEGORIAS_DESPESAS.map(cat => ({
+      nome: cat.value,
+      valor: 0,
+      despesas: [] as DespesaFixa[]
+    }));
+    
+    // Agrupar despesas por categoria
+    despesasFixas.forEach(despesa => {
+      const categoria = categorias.find(c => c.nome === despesa.tipo);
+      if (categoria) {
+        categoria.valor += Number(despesa.valor);
+        categoria.despesas.push(despesa);
+      }
+    });
+    
+    // Calcular o total para percentuais
+    const total = categorias.reduce((sum, cat) => sum + cat.valor, 0);
+    
+    // Formatar para o gráfico
+    return categorias.map((cat, index) => ({
+      nome: cat.nome,
+      valor: cat.valor,
+      percentual: total > 0 ? (cat.valor / total) * 100 : 0,
+      despesas: cat.despesas,
+      cor: COLORS[index % COLORS.length]
+    }));
+  }, [despesasFixas]);
 
-  const calculatedTotalDespesas = React.useMemo(() => {
+  // Dados formatados para o gráfico
+  const dadosGrafico = useMemo(() => 
+    despesasPorCategoria.map(cat => ({
+      name: cat.nome,
+      value: cat.valor,
+      percentual: cat.percentual,
+      color: cat.cor
+    }))
+  , [despesasPorCategoria]);
+
+  // Despesas da categoria selecionada
+  const despesasDaCategoria = useMemo(() => {
+    if (!categoriaAtiva) return [];
+    return despesasPorCategoria.find(cat => cat.nome === categoriaAtiva)?.despesas || [];
+  }, [categoriaAtiva, despesasPorCategoria]);
+
+  // Calcular valor total das despesas
+  const calculatedTotalDespesas = useMemo(() => {
     return despesasFixas?.reduce((sum, despesa) => sum + (despesa.valor || 0), 0) || 0;
   }, [despesasFixas]);
 
@@ -113,7 +171,7 @@ export default function DespesasFixasForm() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {tiposDespesas.map((tipo) => (
+              {CATEGORIAS_DESPESAS.map((tipo) => (
                 <SelectItem key={tipo.value} value={tipo.value}>
                   {tipo.label}
                 </SelectItem>
@@ -143,6 +201,85 @@ export default function DespesasFixasForm() {
           </Button>
         </div>
       </div>
+
+      {/* Gráfico de Pizza para Despesas */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Distribuição de Despesas por Categoria</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChartRecharts>
+                <Pie
+                  data={dadosGrafico}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${percent.toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  onClick={(data) => {
+                    setCategoriaAtiva(data.name);
+                    setDetalhesAbertos(true);
+                  }}
+                >
+                  {dadosGrafico.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.color} 
+                      style={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value) => [formatCurrency(Number(value)), 'Valor Total']} 
+                />
+                <Legend />
+              </PieChartRecharts>
+            </ResponsiveContainer>
+            <div className="text-center text-sm text-muted-foreground mt-2">
+              Clique em um segmento para ver os detalhes das despesas
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Diálogo com detalhes da categoria */}
+      <Dialog open={detalhesAbertos} onOpenChange={setDetalhesAbertos}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalhes - {categoriaAtiva}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {despesasDaCategoria.length > 0 ? (
+              <div className="mt-4">
+                <div className="space-y-3">
+                  {despesasDaCategoria.map((despesa) => (
+                    <div key={despesa.id} className="flex justify-between items-center border-b pb-2">
+                      <span>{despesa.nome_despesa}</span>
+                      <span className="font-medium">{formatCurrency(despesa.valor)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center pt-2 font-bold">
+                    <span>Total</span>
+                    <span>
+                      {formatCurrency(
+                        despesasDaCategoria.reduce((sum, d) => sum + d.valor, 0)
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-sm text-muted-foreground py-4">
+                Não há despesas nesta categoria
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <div className="pt-4">
         <DataTable 

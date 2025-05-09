@@ -88,7 +88,7 @@ export default function HomePage() {
   });
 
   // Carrega dados reais para os gráficos
-  const { data: margemData = [] } = useQuery({
+  const { data: margemData = [], isLoading: isLoadingMargem } = useQuery({
     queryKey: ["dashboard", "margem-chart"],
     queryFn: async () => {
       const { data } = await supabase
@@ -96,7 +96,14 @@ export default function HomePage() {
         .select("id, margem")
         .not("margem", "is", null);
       
-      if (!data || data.length === 0) return [];
+      if (!data || data.length === 0) {
+        // Dados fictícios para quando não houver dados reais
+        return [
+          { name: 'Alta Margem (>50%)', value: 3, percentage: 50 },
+          { name: 'Média Margem (30-50%)', value: 2, percentage: 33.33 },
+          { name: 'Baixa Margem (<30%)', value: 1, percentage: 16.67 },
+        ];
+      }
 
       // Categoriza produtos por faixas de margem
       let altaMargem = 0;
@@ -124,14 +131,21 @@ export default function HomePage() {
     }
   });
   
-  const { data: popularidadeData = [] } = useQuery({
+  const { data: popularidadeData = [], isLoading: isLoadingPopularidade } = useQuery({
     queryKey: ["dashboard", "popularidade-chart"],
     queryFn: async () => {
       const { data } = await supabase
         .from("popularidade")
         .select("id, nivel");
       
-      if (!data || data.length === 0) return [];
+      if (!data || data.length === 0) {
+        // Dados fictícios para quando não houver dados reais
+        return [
+          { name: 'Alta (>80%)', value: 4, percentage: 50 },
+          { name: 'Média (50-80%)', value: 3, percentage: 37.5 },
+          { name: 'Baixa (<50%)', value: 1, percentage: 12.5 },
+        ];
+      }
       
       // Categoriza produtos por nível de popularidade
       let alta = 0;
@@ -191,6 +205,52 @@ export default function HomePage() {
     data: item.created_at,               // Use created_at as data
     tipo: item.tipo                      // Additional property
   }));
+
+  // Query para obter produtos com maior e menor margem e produto mais vendido
+  const { data: indicadoresProdutos = { 
+    maiorMargem: null,
+    menorMargem: null, 
+    maisVendido: null 
+  }} = useQuery({
+    queryKey: ["dashboard", "indicadores-produtos"],
+    queryFn: async () => {
+      // Tentar obter produto com maior margem
+      const { data: maiorMargemData } = await supabase
+        .from("produtos")
+        .select("id, nome, margem")
+        .not("margem", "is", null)
+        .order("margem", { ascending: false })
+        .limit(1);
+
+      // Tentar obter produto com menor margem
+      const { data: menorMargemData } = await supabase
+        .from("produtos")
+        .select("id, nome, margem")
+        .not("margem", "is", null)
+        .gt("margem", 0) // Apenas margens positivas
+        .order("margem", { ascending: true })
+        .limit(1);
+
+      // Tentar obter produto mais vendido
+      const { data: vendasAgregadas } = await supabase
+        .from("vendas")
+        .select(`
+          produto_id,
+          quantidade_total:quantidade(sum),
+          produtos(nome)
+        `)
+        .not("produto_id", "is", null)
+        .group("produto_id, produtos(nome)")
+        .order("quantidade_total", { ascending: false })
+        .limit(1);
+      
+      return {
+        maiorMargem: maiorMargemData?.[0] || null,
+        menorMargem: menorMargemData?.[0] || null,
+        maisVendido: vendasAgregadas?.[0] || null
+      };
+    }
+  });
 
   const COLORS = ['#16a34a', '#f59e0b', '#dc2626'];
 
@@ -317,10 +377,18 @@ export default function HomePage() {
             <TrendingUpIcon className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatarPercentual(0.62)}</div>
-            <p className="text-xs text-muted-foreground">
-              Café especial
-            </p>
+            {indicadoresProdutos.maiorMargem ? (
+              <>
+                <div className="text-2xl font-bold">
+                  {formatarPercentual(indicadoresProdutos.maiorMargem.margem)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {indicadoresProdutos.maiorMargem.nome}
+                </p>
+              </>
+            ) : (
+              <div className="py-2 text-muted-foreground text-sm">Sem dados disponíveis</div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -331,10 +399,18 @@ export default function HomePage() {
             <ArrowDownIcon className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatarPercentual(0.18)}</div>
-            <p className="text-xs text-muted-foreground">
-              Sanduíche de frango
-            </p>
+            {indicadoresProdutos.menorMargem ? (
+              <>
+                <div className="text-2xl font-bold">
+                  {formatarPercentual(indicadoresProdutos.menorMargem.margem)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {indicadoresProdutos.menorMargem.nome}
+                </p>
+              </>
+            ) : (
+              <div className="py-2 text-muted-foreground text-sm">Sem dados disponíveis</div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -345,10 +421,18 @@ export default function HomePage() {
             <ArrowUpIcon className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">128 un</div>
-            <p className="text-xs text-muted-foreground">
-              Café coado
-            </p>
+            {indicadoresProdutos.maisVendido ? (
+              <>
+                <div className="text-2xl font-bold">
+                  {indicadoresProdutos.maisVendido.quantidade_total} un
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {indicadoresProdutos.maisVendido.produtos?.nome}
+                </p>
+              </>
+            ) : (
+              <div className="py-2 text-muted-foreground text-sm">Sem dados disponíveis</div>
+            )}
           </CardContent>
         </Card>
       </div>

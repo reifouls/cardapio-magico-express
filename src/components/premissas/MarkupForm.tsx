@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { formatarPercentual } from "@/lib/utils";
+import { formatarPercentual, formatCurrency } from "@/lib/utils";
 import { Save } from 'lucide-react';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -11,12 +11,14 @@ import { InfoIcon } from 'lucide-react';
 
 type Markup = {
   id: string;
-  percentual_custos_fixos: number; // 0-1
-  percentual_impostos: number; // 0-1
-  percentual_delivery: number; // 0-1
+  percentual_custos_fixos: number;
+  percentual_impostos: number;
+  percentual_delivery: number;
   markup_loja: number;
   markup_delivery: number;
   markup_ponderado: number;
+  margem_lucro_desejada: number;
+  faturamento_desejado: number;
 };
 
 export default function MarkupForm() {
@@ -31,33 +33,77 @@ export default function MarkupForm() {
   );
 
   const [formData, setFormData] = useState<{
-    percentual_custos_fixos_input: string;
+    faturamento_desejado_input: string;
     percentual_impostos_input: string;
     percentual_delivery_input: string;
+    margem_lucro_desejada_input: string;
     markup_loja: number;
     markup_delivery: number;
     markup_ponderado: number;
+    percentual_custos_fixos: number;
   }>({
-    percentual_custos_fixos_input: '30',
+    faturamento_desejado_input: '10000',
     percentual_impostos_input: '9',
     percentual_delivery_input: '15',
+    margem_lucro_desejada_input: '10',
     markup_loja: 2.5,
     markup_delivery: 3.0,
-    markup_ponderado: 2.65
+    markup_ponderado: 2.65,
+    percentual_custos_fixos: 0.3
   });
+
+  // Buscar o total de despesas fixas para calcular o % sobre faturamento
+  const { data: despesasFixas } = useSupabaseQuery<
+    'premissas_despesas_fixas',
+    false,
+    { valor: number }[]
+  >(
+    'premissas_despesas_fixas',
+    ['despesas-total'],
+    { select: 'valor' }
+  );
+
+  // Calcular total de despesas fixas
+  const totalDespesasFixas = React.useMemo(() => {
+    return despesasFixas?.reduce((sum, despesa) => sum + (despesa.valor || 0), 0) || 0;
+  }, [despesasFixas]);
 
   useEffect(() => {
     if (markup) {
       setFormData({
-        percentual_custos_fixos_input: String(markup.percentual_custos_fixos * 100),
+        faturamento_desejado_input: String(markup.faturamento_desejado || 10000),
         percentual_impostos_input: String(markup.percentual_impostos * 100),
         percentual_delivery_input: String(markup.percentual_delivery * 100),
+        margem_lucro_desejada_input: String((markup.margem_lucro_desejada || 0.1) * 100),
         markup_loja: markup.markup_loja,
         markup_delivery: markup.markup_delivery,
-        markup_ponderado: markup.markup_ponderado
+        markup_ponderado: markup.markup_ponderado,
+        percentual_custos_fixos: markup.percentual_custos_fixos
       });
+    } else if (totalDespesasFixas > 0) {
+      // Calcular percentual de custos fixos a partir do faturamento desejado
+      const faturamentoDesejado = parseFloat(formData.faturamento_desejado_input);
+      if (faturamentoDesejado > 0) {
+        const percentualCustosFixos = totalDespesasFixas / faturamentoDesejado;
+        setFormData(prev => ({
+          ...prev,
+          percentual_custos_fixos: percentualCustosFixos
+        }));
+      }
     }
-  }, [markup]);
+  }, [markup, totalDespesasFixas]);
+
+  // Recalcular o percentual de custos fixos quando o faturamento desejado mudar
+  useEffect(() => {
+    if (totalDespesasFixas > 0) {
+      const faturamentoDesejado = parseFloat(formData.faturamento_desejado_input) || 1;
+      const percentualCustosFixos = totalDespesasFixas / faturamentoDesejado;
+      setFormData(prev => ({
+        ...prev,
+        percentual_custos_fixos: percentualCustosFixos
+      }));
+    }
+  }, [formData.faturamento_desejado_input, totalDespesasFixas]);
 
   const { update: updateMarkup, insert: insertMarkup } = useSupabaseMutation<'premissas_markup'>(
     'premissas_markup',
@@ -70,15 +116,16 @@ export default function MarkupForm() {
   // Calcula os markups baseados nos percentuais
   useEffect(() => {
     // Converte percentuais de string para número e divide por 100 para obter decimal
-    const percentualCustosFixos = parseFloat(formData.percentual_custos_fixos_input) / 100 || 0;
+    const percentualCustosFixos = formData.percentual_custos_fixos || 0;
     const percentualImpostos = parseFloat(formData.percentual_impostos_input) / 100 || 0;
     const percentualDelivery = parseFloat(formData.percentual_delivery_input) / 100 || 0;
+    const margemLucroDesejada = parseFloat(formData.margem_lucro_desejada_input) / 100 || 0;
     
     // Calcula markup da loja (formula exemplo)
-    const markupLoja = 1 / (1 - percentualCustosFixos - percentualImpostos);
+    const markupLoja = 1 / (1 - percentualCustosFixos - percentualImpostos - margemLucroDesejada);
     
     // Calcula markup de delivery (considera taxas adicionais)
-    const markupDelivery = 1 / (1 - percentualCustosFixos - percentualImpostos - percentualDelivery);
+    const markupDelivery = 1 / (1 - percentualCustosFixos - percentualImpostos - margemLucroDesejada - percentualDelivery);
     
     // Calcula markup ponderado (exemplo: 70% loja, 30% delivery)
     const markupPonderado = (markupLoja * 0.7) + (markupDelivery * 0.3);
@@ -89,17 +136,20 @@ export default function MarkupForm() {
       markup_delivery: parseFloat(markupDelivery.toFixed(2)),
       markup_ponderado: parseFloat(markupPonderado.toFixed(2))
     }));
-  }, [formData.percentual_custos_fixos_input, formData.percentual_impostos_input, formData.percentual_delivery_input]);
+  }, [formData.percentual_custos_fixos, formData.percentual_impostos_input, formData.percentual_delivery_input, formData.margem_lucro_desejada_input]);
 
   const handleSaveMarkup = async () => {
-    const percentualCustosFixos = parseFloat(formData.percentual_custos_fixos_input) / 100 || 0;
     const percentualImpostos = parseFloat(formData.percentual_impostos_input) / 100 || 0;
     const percentualDelivery = parseFloat(formData.percentual_delivery_input) / 100 || 0;
+    const margemLucroDesejada = parseFloat(formData.margem_lucro_desejada_input) / 100 || 0;
+    const faturamentoDesejado = parseFloat(formData.faturamento_desejado_input) || 0;
     
     const saveData = {
-      percentual_custos_fixos: percentualCustosFixos,
+      percentual_custos_fixos: formData.percentual_custos_fixos,
       percentual_impostos: percentualImpostos,
       percentual_delivery: percentualDelivery,
+      margem_lucro_desejada: margemLucroDesejada,
+      faturamento_desejado: faturamentoDesejado,
       markup_loja: formData.markup_loja,
       markup_delivery: formData.markup_delivery,
       markup_ponderado: formData.markup_ponderado
@@ -124,7 +174,7 @@ export default function MarkupForm() {
           <p className="text-sm mt-1">O markup é uma multiplicação aplicada sobre o custo para determinar o preço de venda. 
           É calculado considerando custos fixos, impostos e, no caso do delivery, taxas extras.</p>
           <p className="text-sm mt-1">
-            <strong>Fórmula Geral:</strong> Markup = 1 / (1 - % Custos Fixos - % Impostos - % Taxas Adicionais)
+            <strong>Fórmula Geral:</strong> Markup = 1 / (1 - % Custos Fixos - % Impostos - % Margem Desejada - % Taxas Adicionais)
           </p>
         </AlertDescription>
       </Alert>
@@ -134,20 +184,40 @@ export default function MarkupForm() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="percentual_custos_fixos">% Custos Fixos</Label>
+            <Label htmlFor="faturamento_desejado">Faturamento Desejado (R$)</Label>
             <Input
-              id="percentual_custos_fixos"
+              id="faturamento_desejado"
               type="number"
               min="1"
-              max="100"
-              value={formData.percentual_custos_fixos_input}
+              value={formData.faturamento_desejado_input}
               onChange={(e) => setFormData({
                 ...formData,
-                percentual_custos_fixos_input: e.target.value
+                faturamento_desejado_input: e.target.value
+              })}
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Total de despesas fixas: {formatCurrency(totalDespesasFixas)}</span>
+              <span>
+                % sobre faturamento: {formatarPercentual(formData.percentual_custos_fixos)}
+              </span>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="margem_lucro_desejada">Margem de Lucro Desejada (%)</Label>
+            <Input
+              id="margem_lucro_desejada"
+              type="number"
+              min="0"
+              max="100"
+              value={formData.margem_lucro_desejada_input}
+              onChange={(e) => setFormData({
+                ...formData,
+                margem_lucro_desejada_input: e.target.value
               })}
             />
             <p className="text-xs text-muted-foreground">
-              {formatarPercentual(parseFloat(formData.percentual_custos_fixos_input) / 100 || 0)}
+              {formatarPercentual(parseFloat(formData.margem_lucro_desejada_input) / 100 || 0)}
             </p>
           </div>
           
@@ -170,7 +240,7 @@ export default function MarkupForm() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="percentual_delivery">% Vendas Delivery</Label>
+            <Label htmlFor="percentual_delivery">% Taxas Delivery</Label>
             <Input
               id="percentual_delivery"
               type="number"
@@ -197,7 +267,7 @@ export default function MarkupForm() {
               className="bg-gray-50"
             />
             <p className="text-xs text-muted-foreground">
-              Valor calculado automaticamente
+              Aplicado para vendas no local
             </p>
           </div>
           
@@ -211,7 +281,7 @@ export default function MarkupForm() {
               className="bg-gray-50"
             />
             <p className="text-xs text-muted-foreground">
-              Valor calculado automaticamente
+              Aplicado para vendas de delivery
             </p>
           </div>
           
