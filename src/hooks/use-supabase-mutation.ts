@@ -111,9 +111,9 @@ export function useSupabaseMutation<T extends TableNames>(
     },
   });
 
-  // Remove by column mutation - adding a specialized method for removing by any column
+  // Remove by column mutation - fixing the type signature to match TanStack Query's expectations
   const removeByColumnMutation = useMutation({
-    mutationFn: async (column: string, value: string) => {
+    mutationFn: async ({ column, value }: { column: string; value: string }) => {
       const { error } = await supabase
         .from(tableName)
         .delete()
@@ -145,7 +145,7 @@ export function useSupabaseMutation<T extends TableNames>(
     remove: (columnOrId: string, value?: string) => {
       // If value is provided, use removeByColumn, otherwise use delete by id
       if (value !== undefined) {
-        return removeByColumnMutation.mutate(columnOrId, value);
+        return removeByColumnMutation.mutate({ column: columnOrId, value });
       } else {
         return deleteMutation.mutate(columnOrId);
       }
