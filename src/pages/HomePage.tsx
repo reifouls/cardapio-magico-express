@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +8,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { ArrowDownIcon, ArrowUpIcon, TrendingUpIcon } from "lucide-react";
+
+// Add interface definitions for better type safety
+interface VendaData {
+  produto_id: string;
+  quantidade: number;
+  produtos: {
+    nome: string;
+  } | null;
+}
+
+interface VendaAgregada {
+  produto_id: string;
+  quantidade_total: number;
+  produtos: {
+    nome: string;
+  } | null;
+}
 
 export default function HomePage() {
   const { data: statsData = { 
@@ -173,7 +189,7 @@ export default function HomePage() {
     }
   });
   
-  // Transforming sugestoes data to match the expected format for RecentesList
+  // Transform sugestoes data to match the expected format for RecentesList
   const { data: sugestoesRaw = [], isLoading: sugestoesLoading } = useQuery({
     queryKey: ["sugestoes", "recentes"],
     queryFn: async () => {
@@ -239,9 +255,9 @@ export default function HomePage() {
         .not("produto_id", "is", null);
         
       // Handle aggregation in JavaScript instead
-      const vendasPorProduto = {};
+      const vendasPorProduto: Record<string, VendaAgregada> = {};
       if (vendasData) {
-        vendasData.forEach(venda => {
+        (vendasData as VendaData[]).forEach(venda => {
           if (!vendasPorProduto[venda.produto_id]) {
             vendasPorProduto[venda.produto_id] = {
               produto_id: venda.produto_id,
