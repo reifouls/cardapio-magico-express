@@ -111,13 +111,48 @@ export function useSupabaseMutation<T extends TableNames>(
     },
   });
 
+  // Remove by column mutation - adding a specialized method for removing by any column
+  const removeByColumnMutation = useMutation({
+    mutationFn: async (column: string, value: string) => {
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq(column as any, value); // Type cast needed due to Supabase client limitations
+
+      if (error) {
+        console.error('Error removing data:', error);
+        throw error;
+      }
+      
+      return value;
+    },
+    onSuccess: () => {
+      if (options?.onSuccessMessage) {
+        toast.success(options.onSuccessMessage);
+      }
+      if (options?.queryKeyToInvalidate) {
+        queryClient.invalidateQueries({ queryKey: options.queryKeyToInvalidate });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(options?.onErrorMessage || `Error: ${error.message}`);
+    },
+  });
+
   return {
     insert: insertMutation.mutate,
     update: updateMutation.mutate,
-    remove: deleteMutation.mutate,
+    remove: (columnOrId: string, value?: string) => {
+      // If value is provided, use removeByColumn, otherwise use delete by id
+      if (value !== undefined) {
+        return removeByColumnMutation.mutate(columnOrId, value);
+      } else {
+        return deleteMutation.mutate(columnOrId);
+      }
+    },
     insertAsync: insertMutation.mutateAsync,
     updateAsync: updateMutation.mutateAsync,
     removeAsync: deleteMutation.mutateAsync,
-    isLoading: insertMutation.isPending || updateMutation.isPending || deleteMutation.isPending,
+    isLoading: insertMutation.isPending || updateMutation.isPending || deleteMutation.isPending || removeByColumnMutation.isPending,
   };
 }

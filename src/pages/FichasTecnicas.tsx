@@ -74,6 +74,7 @@ export default function FichasTecnicas() {
     { single: true }
   );
 
+  // Fixed the function call by removing the 4th argument and using options object properly
   const { data: fichaTecnica, refetch: refetchFichaTecnica } = useSupabaseQuery<
     'ficha_tecnica',
     false,
@@ -83,9 +84,9 @@ export default function FichasTecnicas() {
     ['by-produto', currentProduto?.id || ''],
     { 
       select: '*, ingrediente:ingrediente_id(*)',
-      filter: { column: 'produto_id', operator: 'eq', value: currentProduto?.id || '' }
-    },
-    { enabled: !!currentProduto?.id }
+      filter: { column: 'produto_id', operator: 'eq', value: currentProduto?.id || '' },
+      enabled: !!currentProduto?.id
+    }
   );
 
   const { insert: insertProduto, update: updateProduto } = useSupabaseMutation<'produtos'>(
@@ -143,15 +144,21 @@ export default function FichasTecnicas() {
   // Calculate costs when ingredients or rendimiento change
   useEffect(() => {
     if (ingredientesList && ingredientes.length > 0) {
+      // Fix the type issue by adding missing properties (created_at, id)
       const fichaItems = ingredientes.map(item => {
         const ing = ingredientesList.find(i => i.id === item.id);
-        return {
-          ingrediente_id: item.id,
-          produto_id: currentProduto?.id || '',
-          quantidade_utilizada: item.quantidade,
-          ingrediente: ing!
-        };
-      }).filter(item => item.ingrediente); // Filter out any undefined ingredientes
+        if (ing) {
+          return {
+            id: '', // Providing a default empty id
+            created_at: new Date().toISOString(), // Providing a default created_at
+            ingrediente_id: item.id,
+            produto_id: currentProduto?.id || '',
+            quantidade_utilizada: item.quantidade,
+            ingrediente: ing
+          };
+        }
+        return null;
+      }).filter(Boolean) as (FichaTecnica & { ingrediente: Ingrediente })[];
       
       calculateCustos(fichaItems, currentProduto?.rendimento || 1);
     }
@@ -218,8 +225,8 @@ export default function FichasTecnicas() {
           data: produtoData
         });
         
-        // Remove existing ficha_tecnica entries to recreate them
-        await removeFichaTecnica({ column: 'produto_id', value: produtoId });
+        // Fix: Pass the correct parameter type to removeFichaTecnica
+        await removeFichaTecnica('produto_id', produtoId);
       }
 
       // Insert or update ficha_tecnica entries

@@ -25,6 +25,7 @@ export function useSupabaseQuery<
     filter?: Record<string, any>;
     limit?: number;
     single?: IsSingle;
+    enabled?: boolean;
   }
 ) {
   return useQuery({
@@ -37,8 +38,39 @@ export function useSupabaseQuery<
       if (options?.filter) {
         Object.entries(options.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
-            // Need to use any here due to dynamic method call
-            query = query.eq(key, value) as any;
+            const { column, operator = 'eq', value: filterValue } = 
+              typeof value === 'object' && value.column 
+                ? value 
+                : { column: key, value };
+            
+            switch (operator) {
+              case 'eq':
+                query = query.eq(column, filterValue) as any;
+                break;
+              case 'neq':
+                query = query.neq(column, filterValue) as any;
+                break;
+              case 'gt':
+                query = query.gt(column, filterValue) as any;
+                break;
+              case 'lt':
+                query = query.lt(column, filterValue) as any;
+                break;
+              case 'gte':
+                query = query.gte(column, filterValue) as any;
+                break;
+              case 'lte':
+                query = query.lte(column, filterValue) as any;
+                break;
+              case 'like':
+                query = query.like(column, filterValue) as any;
+                break;
+              case 'ilike':
+                query = query.ilike(column, filterValue) as any;
+                break;
+              default:
+                query = query.eq(column, filterValue) as any;
+            }
           }
         });
       }
@@ -63,5 +95,6 @@ export function useSupabaseQuery<
 
       return data as ReturnType;
     },
+    enabled: options?.enabled !== false // Default to true if not specified
   });
 }
