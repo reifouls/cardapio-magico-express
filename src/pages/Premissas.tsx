@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings } from 'lucide-react';
 import CapacidadeProdutivaForm from '@/components/premissas/CapacidadeProdutiva';
 import DespesasFixasForm from '@/components/premissas/DespesasFixasForm';
 import MarkupForm from '@/components/premissas/MarkupForm';

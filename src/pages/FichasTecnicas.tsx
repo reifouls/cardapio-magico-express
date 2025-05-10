@@ -50,7 +50,7 @@ export default function FichasTecnicas() {
     ['by-produto', currentProduto?.id || ''],
     { 
       select: '*, ingrediente:ingrediente_id(*)',
-      filter: { column: 'produto_id', operator: 'eq', value: currentProduto?.id || '' },
+      filter: { column: 'produto_id', value: currentProduto?.id || '' },
       enabled: !!currentProduto?.id
     }
   );
@@ -110,11 +110,7 @@ export default function FichasTecnicas() {
       
       // Complete the save function
       if (!produtoId) {
-        // Insert new produto - Fix here: Check if nome exists and rendimento is set
-        if (!currentProduto.nome || !currentProduto.rendimento) {
-          return; // Don't proceed if required fields are missing
-        }
-        
+        // Insert new produto
         const produtoToInsert = {
           nome: currentProduto.nome,
           rendimento: currentProduto.rendimento,
@@ -137,7 +133,7 @@ export default function FichasTecnicas() {
         });
         
         // Remove existing ficha_tecnica entries
-        await removeFichaTecnica('produto_id', produtoId);
+        await removeFichaTecnica({ column: 'produto_id', value: produtoId });
       }
 
       // Insert or update ficha_tecnica entries

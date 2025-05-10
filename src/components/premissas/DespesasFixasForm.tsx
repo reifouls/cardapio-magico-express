@@ -28,7 +28,7 @@ const CATEGORIAS_DESPESAS = [
   { value: 'Despesas Financeiras', label: 'Despesas Financeiras' }
 ];
 
-const COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#3b82f6'];
+const COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
 
 export default function DespesasFixasForm() {
   const [novaDespesa, setNovaDespesa] = useState<Partial<DespesaFixa>>({
@@ -122,7 +122,7 @@ export default function DespesasFixasForm() {
     }));
   }, [despesasFixas]);
 
-  // Dados formatados para o gráfico
+  // Dados formatados para o gráfico principal
   const dadosGrafico = useMemo(() => 
     despesasPorCategoria.map(cat => ({
       name: cat.nome,
@@ -131,6 +131,25 @@ export default function DespesasFixasForm() {
       color: cat.cor
     }))
   , [despesasPorCategoria]);
+
+  // Dados formatados para o gráfico detalhado de despesas por categoria
+  const dadosGraficoDetalhado = useMemo(() => {
+    if (!categoriaAtiva) return [];
+    
+    const categoria = despesasPorCategoria.find(cat => cat.nome === categoriaAtiva);
+    if (!categoria || categoria.despesas.length === 0) return [];
+    
+    // Calcular o total da categoria
+    const totalCategoria = categoria.despesas.reduce((sum, despesa) => sum + despesa.valor, 0);
+    
+    // Retornar dados formatados para o gráfico de pizza
+    return categoria.despesas.map((despesa, index) => ({
+      name: despesa.nome_despesa,
+      value: despesa.valor,
+      percentual: totalCategoria > 0 ? (despesa.valor / totalCategoria) * 100 : 0,
+      color: COLORS[index % COLORS.length]
+    }));
+  }, [categoriaAtiva, despesasPorCategoria]);
 
   // Despesas da categoria selecionada
   const despesasDaCategoria = useMemo(() => {
@@ -254,24 +273,40 @@ export default function DespesasFixasForm() {
           </DialogHeader>
           <div className="space-y-4">
             {despesasDaCategoria.length > 0 ? (
-              <div className="mt-4">
-                <div className="space-y-3">
-                  {despesasDaCategoria.map((despesa) => (
-                    <div key={despesa.id} className="flex justify-between items-center border-b pb-2">
-                      <span>{despesa.nome_despesa}</span>
-                      <span className="font-medium">{formatCurrency(despesa.valor)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between items-center pt-2 font-bold">
-                    <span>Total</span>
-                    <span>
-                      {formatCurrency(
-                        despesasDaCategoria.reduce((sum, d) => sum + d.valor, 0)
-                      )}
-                    </span>
-                  </div>
+              <>
+                {/* Gráfico de Pizza detalhado da categoria */}
+                <div style={{ width: '100%', height: 250 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChartRecharts>
+                      <Pie
+                        data={dadosGraficoDetalhado}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${percent.toFixed(1)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {dadosGraficoDetalhado.map((entry, index) => (
+                          <Cell key={`detail-cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => [formatCurrency(Number(value)), 'Valor']} 
+                      />
+                      <Legend />
+                    </PieChartRecharts>
+                  </ResponsiveContainer>
                 </div>
-              </div>
+                <div className="pt-2 text-right">
+                  <p className="font-medium">Total {categoriaAtiva}: 
+                    <span className="ml-2 font-bold">
+                      {formatCurrency(despesasDaCategoria.reduce((sum, d) => sum + d.valor, 0))}
+                    </span>
+                  </p>
+                </div>
+              </>
             ) : (
               <p className="text-center text-sm text-muted-foreground py-4">
                 Não há despesas nesta categoria
