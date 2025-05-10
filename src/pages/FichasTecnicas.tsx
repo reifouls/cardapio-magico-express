@@ -133,7 +133,8 @@ export default function FichasTecnicas() {
         });
         
         // Remove existing ficha_tecnica entries
-        await removeFichaTecnica({ column: 'produto_id', value: produtoId });
+        // Here's the fix: we need to pass a string filter instead of an object
+        await removeFichaTecnica(`produto_id.eq.${produtoId}`);
       }
 
       // Insert or update ficha_tecnica entries
