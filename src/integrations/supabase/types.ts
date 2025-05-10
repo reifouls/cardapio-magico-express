@@ -290,30 +290,42 @@ export type Database = {
       premissas_markup: {
         Row: {
           created_at: string
+          faturamento_desejado: number | null
           id: string
+          margem_lucro_desejada: number | null
           markup_delivery: number
           markup_loja: number
           markup_ponderado: number
+          mix_vendas_delivery: number | null
+          mix_vendas_loja: number | null
           percentual_custos_fixos: number
           percentual_delivery: number
           percentual_impostos: number
         }
         Insert: {
           created_at?: string
+          faturamento_desejado?: number | null
           id?: string
+          margem_lucro_desejada?: number | null
           markup_delivery: number
           markup_loja: number
           markup_ponderado: number
+          mix_vendas_delivery?: number | null
+          mix_vendas_loja?: number | null
           percentual_custos_fixos: number
           percentual_delivery: number
           percentual_impostos: number
         }
         Update: {
           created_at?: string
+          faturamento_desejado?: number | null
           id?: string
+          margem_lucro_desejada?: number | null
           markup_delivery?: number
           markup_loja?: number
           markup_ponderado?: number
+          mix_vendas_delivery?: number | null
+          mix_vendas_loja?: number | null
           percentual_custos_fixos?: number
           percentual_delivery?: number
           percentual_impostos?: number

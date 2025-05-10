@@ -4,10 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { formatarPercentual, formatCurrency } from "@/lib/utils";
-import { Save, InfoCircle } from 'lucide-react';
+import { Save, Info } from 'lucide-react';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon } from 'lucide-react';
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from '@/components/ui/separator';
@@ -193,7 +192,7 @@ export default function MarkupForm() {
   return (
     <div className="space-y-6">
       <Alert className="bg-blue-50 border-blue-200">
-        <InfoIcon className="h-4 w-4 text-blue-600" />
+        <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
           <p className="font-medium">Como o markup é calculado:</p>
           <p className="text-sm mt-1">O markup é uma multiplicação aplicada sobre o custo para determinar o preço de venda. 

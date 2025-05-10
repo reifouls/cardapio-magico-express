@@ -12,6 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useDespesasFixas, CATEGORIAS_DESPESAS } from './hooks/useDespesasFixas';
 import { DespesasChart, DespesasDetalheChart } from './DespesasCharts';
 
+// Define the DespesaFixa type to fix the type error
+type DespesaFixa = {
+  id: string;
+  nome_despesa: string;
+  tipo: string;
+  valor: number;
+};
+
 export default function DespesasFixasForm() {
   // Use the custom hook for all despesas logic
   const {
@@ -39,20 +47,20 @@ export default function DespesasFixasForm() {
     return despesasFixas.filter(despesa => despesa.tipo === categoriaAtiva);
   }, [categoriaAtiva, despesasFixas]);
 
-  // Table columns definition
+  // Table columns definition - Fixed to use the correct type
   const despesasColumns = [
     {
       header: "Nome da Despesa",
-      accessorKey: "nome_despesa"
+      accessorKey: "nome_despesa" as const
     },
     {
       header: "Tipo",
-      accessorKey: "tipo"
+      accessorKey: "tipo" as const
     },
     {
       header: "Valor Mensal",
-      accessorKey: "valor",
-      cell: (info: { row: { original: { valor: number } } }) => formatCurrency(info.row.original.valor)
+      accessorKey: "valor" as const,
+      cell: (info: { row: { original: DespesaFixa } }) => formatCurrency(info.row.original.valor)
     }
   ];
 
