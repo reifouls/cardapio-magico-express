@@ -1,79 +1,45 @@
 
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { DataTable } from '@/components/ui/data-table';
 import { formatCurrency } from "@/lib/utils";
-import { Plus, PieChart } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ResponsiveContainer, PieChart as PieChartRecharts, Pie, Cell, Tooltip, Legend } from 'recharts';
-
-// Define proper types
-type DespesaFixa = {
-  id: string;
-  nome_despesa: string;
-  tipo: string;
-  valor: number;
-};
-
-const CATEGORIAS_DESPESAS = [
-  { value: 'Custos de Ocupação', label: 'Custos de Ocupação' },
-  { value: 'Custos de Pessoas', label: 'Custos de Pessoas' },
-  { value: 'Despesas Administrativas', label: 'Despesas Administrativas' },
-  { value: 'Despesas Financeiras', label: 'Despesas Financeiras' }
-];
-
-const COLORS = ['#16a34a', '#f59e0b', '#dc2626', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
+import { useDespesasFixas, CATEGORIAS_DESPESAS } from './hooks/useDespesasFixas';
+import { DespesasChart, DespesasDetalheChart } from './DespesasCharts';
 
 export default function DespesasFixasForm() {
-  const [novaDespesa, setNovaDespesa] = useState<Partial<DespesaFixa>>({
-    nome_despesa: '',
-    tipo: 'Custos de Ocupação',
-    valor: 0
-  });
-  
-  const [categoriaAtiva, setCategoriaAtiva] = useState<string | null>(null);
-  const [detalhesAbertos, setDetalhesAbertos] = useState(false);
+  // Use the custom hook for all despesas logic
+  const {
+    despesasFixas,
+    isLoadingDespesas,
+    novaDespesa,
+    setNovaDespesa,
+    handleAddDespesa,
+    handleDeleteDespesa,
+    totalDespesas,
+    categoriaAtiva,
+    setCategoriaAtiva,
+    detalhesAbertos,
+    setDetalhesAbertos
+  } = useDespesasFixas();
 
-  const { data: despesasFixas, isLoading: isLoadingDespesas } = useSupabaseQuery<
-    'premissas_despesas_fixas',
-    false,
-    DespesaFixa[]
-  >(
-    'premissas_despesas_fixas',
-    ['despesas'],
-    { order: 'nome_despesa' }
-  );
-
-  const { insert: insertDespesa, remove: deleteDespesa } = useSupabaseMutation<'premissas_despesas_fixas'>(
-    'premissas_despesas_fixas',
-    {
-      onSuccessMessage: 'Despesa salva com sucesso!',
-      queryKeyToInvalidate: ['despesas']
-    }
-  );
-
-  const handleAddDespesa = async () => {
-    if (!novaDespesa.nome_despesa || !novaDespesa.valor) return;
-    await insertDespesa({
-      nome_despesa: novaDespesa.nome_despesa,
-      tipo: novaDespesa.tipo || 'Custos de Ocupação',
-      valor: novaDespesa.valor
-    });
-    setNovaDespesa({ nome_despesa: '', tipo: 'Custos de Ocupação', valor: 0 });
+  const handleCategoriaClick = (nome: string) => {
+    setCategoriaAtiva(nome);
+    setDetalhesAbertos(true);
   };
 
-  const handleDeleteDespesa = async (despesa: DespesaFixa) => {
-    if (window.confirm(`Deseja realmente excluir a despesa "${despesa.nome_despesa}"?`)) {
-      await deleteDespesa(despesa.id);
-    }
-  };
+  // Get despesas for the active category
+  const despesasDaCategoria = React.useMemo(() => {
+    if (!categoriaAtiva || !despesasFixas) return [];
+    return despesasFixas.filter(despesa => despesa.tipo === categoriaAtiva);
+  }, [categoriaAtiva, despesasFixas]);
 
+  // Table columns definition
   const despesasColumns = [
     {
       header: "Nome da Despesa",
@@ -86,81 +52,9 @@ export default function DespesasFixasForm() {
     {
       header: "Valor Mensal",
       accessorKey: "valor",
-      cell: (info: { row: { original: DespesaFixa } }) => formatCurrency(info.row.original.valor)
+      cell: (info: { row: { original: { valor: number } } }) => formatCurrency(info.row.original.valor)
     }
   ];
-
-  // Agrupar despesas por categoria e calcular totais
-  const despesasPorCategoria = useMemo(() => {
-    if (!despesasFixas || despesasFixas.length === 0) return [];
-    
-    const categorias = CATEGORIAS_DESPESAS.map(cat => ({
-      nome: cat.value,
-      valor: 0,
-      despesas: [] as DespesaFixa[]
-    }));
-    
-    // Agrupar despesas por categoria
-    despesasFixas.forEach(despesa => {
-      const categoria = categorias.find(c => c.nome === despesa.tipo);
-      if (categoria) {
-        categoria.valor += Number(despesa.valor);
-        categoria.despesas.push(despesa);
-      }
-    });
-    
-    // Calcular o total para percentuais
-    const total = categorias.reduce((sum, cat) => sum + cat.valor, 0);
-    
-    // Formatar para o gráfico
-    return categorias.map((cat, index) => ({
-      nome: cat.nome,
-      valor: cat.valor,
-      percentual: total > 0 ? (cat.valor / total) * 100 : 0,
-      despesas: cat.despesas,
-      cor: COLORS[index % COLORS.length]
-    }));
-  }, [despesasFixas]);
-
-  // Dados formatados para o gráfico principal
-  const dadosGrafico = useMemo(() => 
-    despesasPorCategoria.map(cat => ({
-      name: cat.nome,
-      value: cat.valor,
-      percentual: cat.percentual,
-      color: cat.cor
-    }))
-  , [despesasPorCategoria]);
-
-  // Dados formatados para o gráfico detalhado de despesas por categoria
-  const dadosGraficoDetalhado = useMemo(() => {
-    if (!categoriaAtiva) return [];
-    
-    const categoria = despesasPorCategoria.find(cat => cat.nome === categoriaAtiva);
-    if (!categoria || categoria.despesas.length === 0) return [];
-    
-    // Calcular o total da categoria
-    const totalCategoria = categoria.despesas.reduce((sum, despesa) => sum + despesa.valor, 0);
-    
-    // Retornar dados formatados para o gráfico de pizza
-    return categoria.despesas.map((despesa, index) => ({
-      name: despesa.nome_despesa,
-      value: despesa.valor,
-      percentual: totalCategoria > 0 ? (despesa.valor / totalCategoria) * 100 : 0,
-      color: COLORS[index % COLORS.length]
-    }));
-  }, [categoriaAtiva, despesasPorCategoria]);
-
-  // Despesas da categoria selecionada
-  const despesasDaCategoria = useMemo(() => {
-    if (!categoriaAtiva) return [];
-    return despesasPorCategoria.find(cat => cat.nome === categoriaAtiva)?.despesas || [];
-  }, [categoriaAtiva, despesasPorCategoria]);
-
-  // Calcular valor total das despesas
-  const calculatedTotalDespesas = useMemo(() => {
-    return despesasFixas?.reduce((sum, despesa) => sum + (despesa.valor || 0), 0) || 0;
-  }, [despesasFixas]);
 
   return (
     <div className="space-y-6">
@@ -227,41 +121,11 @@ export default function DespesasFixasForm() {
           <CardTitle>Distribuição de Despesas por Categoria</CardTitle>
         </CardHeader>
         <CardContent>
-          <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChartRecharts>
-                <Pie
-                  data={dadosGrafico}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${percent.toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  onClick={(data) => {
-                    setCategoriaAtiva(data.name);
-                    setDetalhesAbertos(true);
-                  }}
-                >
-                  {dadosGrafico.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.color} 
-                      style={{ cursor: 'pointer' }}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value) => [formatCurrency(Number(value)), 'Valor Total']} 
-                />
-                <Legend />
-              </PieChartRecharts>
-            </ResponsiveContainer>
-            <div className="text-center text-sm text-muted-foreground mt-2">
-              Clique em um segmento para ver os detalhes das despesas
-            </div>
-          </div>
+          <DespesasChart 
+            despesasFixas={despesasFixas} 
+            categorias={CATEGORIAS_DESPESAS}
+            onCategoriaClick={handleCategoriaClick}
+          />
         </CardContent>
       </Card>
 
@@ -272,46 +136,10 @@ export default function DespesasFixasForm() {
             <DialogTitle>Detalhes - {categoriaAtiva}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {despesasDaCategoria.length > 0 ? (
-              <>
-                {/* Gráfico de Pizza detalhado da categoria */}
-                <div style={{ width: '100%', height: 250 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChartRecharts>
-                      <Pie
-                        data={dadosGraficoDetalhado}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${percent.toFixed(1)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {dadosGraficoDetalhado.map((entry, index) => (
-                          <Cell key={`detail-cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value) => [formatCurrency(Number(value)), 'Valor']} 
-                      />
-                      <Legend />
-                    </PieChartRecharts>
-                  </ResponsiveContainer>
-                </div>
-                <div className="pt-2 text-right">
-                  <p className="font-medium">Total {categoriaAtiva}: 
-                    <span className="ml-2 font-bold">
-                      {formatCurrency(despesasDaCategoria.reduce((sum, d) => sum + d.valor, 0))}
-                    </span>
-                  </p>
-                </div>
-              </>
-            ) : (
-              <p className="text-center text-sm text-muted-foreground py-4">
-                Não há despesas nesta categoria
-              </p>
-            )}
+            <DespesasDetalheChart 
+              despesas={despesasDaCategoria}
+              categoria={categoriaAtiva || ''} 
+            />
           </div>
         </DialogContent>
       </Dialog>
@@ -328,7 +156,7 @@ export default function DespesasFixasForm() {
       <div className="pt-4 text-right">
         <p className="font-medium">Total de Despesas Fixas: 
           <span className="ml-2 font-bold">
-            {formatCurrency(calculatedTotalDespesas)}
+            {formatCurrency(totalDespesas)}
           </span>
         </p>
       </div>
