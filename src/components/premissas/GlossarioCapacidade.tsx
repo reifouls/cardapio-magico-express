@@ -4,9 +4,10 @@ import { HelpCircle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+// We create a global TooltipProvider in App.tsx, so we don't need to include it in each component
 
 interface GlossarioItemProps {
   termo: string;
@@ -15,18 +16,16 @@ interface GlossarioItemProps {
 
 const GlossarioItem = ({ termo, descricao }: GlossarioItemProps) => {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex items-center cursor-help">
-            <HelpCircle className="h-4 w-4 ml-1 text-muted-foreground" />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          <p className="text-sm">{descricao}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex items-center cursor-help">
+          <HelpCircle className="h-4 w-4 ml-1 text-muted-foreground" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <p className="text-sm">{descricao}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 };
 

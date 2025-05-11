@@ -26,6 +26,16 @@ interface VendaAgregada {
   } | null;
 }
 
+// Define stats interface for type safety
+interface DashboardStatsProps {
+  totalProdutos?: number;
+  totalIngredientes?: number;
+  mediaMargemProdutos?: number;
+  totalCombos?: number;
+  totalVendas?: number;
+  receitaTotal?: number;
+}
+
 export default function HomePage() {
   const { data: statsData = { 
     totalProdutos: 0,
@@ -34,7 +44,7 @@ export default function HomePage() {
     totalCombos: 0,
     totalVendas: 0,
     receitaTotal: 0
-  }, isLoading: statsLoading } = useQuery({
+  }, isLoading: statsLoading } = useQuery<DashboardStatsProps>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
       // Obter contagem de produtos
@@ -120,7 +130,7 @@ export default function HomePage() {
           { name: 'Baixa Margem (<30%)', value: 1, percentage: 16.67 },
         ];
       }
-
+      
       // Categoriza produtos por faixas de margem
       let altaMargem = 0;
       let mediaMargem = 0;
@@ -293,7 +303,14 @@ export default function HomePage() {
         Bem-vindo ao Cardápio Mágico Express. Gerencie suas fichas técnicas e otimize sua precificação.
       </p>
 
-      <DashboardStats {...statsData} />
+      <DashboardStats 
+        totalProdutos={statsData.totalProdutos}
+        totalIngredientes={statsData.totalIngredientes}
+        mediaMargemProdutos={statsData.mediaMargemProdutos}
+        totalCombos={statsData.totalCombos}
+        totalVendas={statsData.totalVendas}
+        receitaTotal={statsData.receitaTotal}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <RecentesList
