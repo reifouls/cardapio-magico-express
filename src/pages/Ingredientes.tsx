@@ -14,7 +14,11 @@ import { Save, Search } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { Database } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
+import { usePerformance } from '@/hooks/usePerformance';
+import { useMeasurePerformance } from '@/hooks/useMeasurePerformance';
+import { useEffect } from 'react';
 
+// Define the Ingrediente type from the database
 type Ingrediente = Database['public']['Tables']['ingredientes']['Row'] & {
   sequencial?: number;
 };
@@ -23,6 +27,9 @@ export default function Ingredientes() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentIngrediente, setCurrentIngrediente] = useState<Partial<Ingrediente> | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // Initialize measure before using it
+  const measure = useMeasurePerformance();
+  usePerformance('ingredientes-page-render');
 
   const { data: ingredientes, isLoading } = useSupabaseQuery<
     'ingredientes',
@@ -31,8 +38,20 @@ export default function Ingredientes() {
   >(
     'ingredientes',
     ['list'],
-    { order: 'nome' }
+    { 
+      order: 'nome' ,
+    }
   );
+  
+  // Use useEffect to handle the measurement after data is loaded
+  useEffect(() => {
+    if (ingredientes) {
+      measure('ingredientes-data-load', async () => {
+        // Simula uma operação assíncrona para demonstração
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+    }
+  }, [ingredientes, measure]);
 
   const { insert: insertIngrediente, update: updateIngrediente, remove: deleteIngrediente } = 
     useSupabaseMutation<'ingredientes'>(
@@ -43,7 +62,7 @@ export default function Ingredientes() {
         queryKeyToInvalidate: ['ingredientes', 'list']
       }
     );
-
+    
   // Add sequential ID to each ingredient
   const ingredientesWithSequential = useMemo(() => {
     if (!ingredientes) return [];
@@ -112,28 +131,28 @@ export default function Ingredientes() {
     if (!currentIngrediente?.nome || !currentIngrediente.unidade) return;
     
     try {
-      if (currentIngrediente.id) {
-        // Update existing ingrediente
-        await updateIngrediente({
-          id: currentIngrediente.id,
-          data: {
+      await measure('ingredientes-save', async () => {
+        if (currentIngrediente.id) {
+          await updateIngrediente({
+            id: currentIngrediente.id,
+            data: {
+              nome: currentIngrediente.nome,
+              tipo: currentIngrediente.tipo,
+              unidade: currentIngrediente.unidade,
+              custo_unitario: currentIngrediente.custo_unitario,
+              fornecedor: currentIngrediente.fornecedor
+            }
+          });
+        } else {
+          await insertIngrediente({
             nome: currentIngrediente.nome,
             tipo: currentIngrediente.tipo,
             unidade: currentIngrediente.unidade,
-            custo_unitario: currentIngrediente.custo_unitario,
+            custo_unitario: currentIngrediente.custo_unitario || 0,
             fornecedor: currentIngrediente.fornecedor
-          }
-        });
-      } else {
-        // Insert new ingrediente
-        await insertIngrediente({
-          nome: currentIngrediente.nome,
-          tipo: currentIngrediente.tipo,
-          unidade: currentIngrediente.unidade,
-          custo_unitario: currentIngrediente.custo_unitario || 0,
-          fornecedor: currentIngrediente.fornecedor
-        });
-      }
+          });
+        }
+      });
 
       setIsFormOpen(false);
       setCurrentIngrediente(null);

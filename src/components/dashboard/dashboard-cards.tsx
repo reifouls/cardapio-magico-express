@@ -1,9 +1,8 @@
-
-import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList, ShoppingBasket, Package, LineChart, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatCurrency, formatarPercentual } from "@/lib/utils";
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 interface DashboardCardProps {
   title: string;
@@ -30,7 +29,7 @@ export function DashboardCard({ title, value, description, icon, href }: Dashboa
   );
 }
 
-interface DashboardStatsProps {
+export interface DashboardStatsProps {
   totalProdutos: number;
   totalIngredientes: number;
   mediaMargemProdutos: number;
@@ -39,54 +38,61 @@ interface DashboardStatsProps {
   receitaTotal: number;
 }
 
-export function DashboardStats({
-  totalProdutos,
-  totalIngredientes,
-  mediaMargemProdutos,
-  totalCombos,
-  totalVendas,
-  receitaTotal
-}: DashboardStatsProps) {
+export function DashboardStats() {
+  const [stats, loading, error] = useDashboardData();
+
+  if (loading) {
+    return <div>Carregando...</div>;
+  }
+
+  if (error) {
+    return <div>Erro ao carregar dados: {error.message}</div>;
+  }
+
+  if (!stats) {
+    return <div>Nenhum dado disponível</div>;
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <DashboardCard
         title="Produtos"
-        value={totalProdutos.toString()}
+        value={stats.totalProdutos.toString()}
         description="Total de produtos cadastrados"
         icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
         href="/fichas-tecnicas"
       />
       <DashboardCard
         title="Ingredientes"
-        value={totalIngredientes.toString()}
+        value={stats.totalIngredientes.toString()}
         description="Total de ingredientes cadastrados"
         icon={<ShoppingBasket className="h-4 w-4 text-muted-foreground" />}
         href="/ingredientes"
       />
       <DashboardCard
         title="Margem Média"
-        value={formatarPercentual(mediaMargemProdutos)}
+        value={formatarPercentual(stats.mediaMargemProdutos)}
         description="Média de margem dos produtos"
         icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
         href="/engenharia"
       />
       <DashboardCard
         title="Combos"
-        value={totalCombos.toString()}
+        value={stats.totalCombos.toString()}
         description="Total de combos cadastrados"
         icon={<Package className="h-4 w-4 text-muted-foreground" />}
         href="/combos"
       />
       <DashboardCard
         title="Vendas"
-        value={totalVendas.toString()}
+        value={stats.totalVendas.toString()}
         description="Total de vendas registradas"
         icon={<LineChart className="h-4 w-4 text-muted-foreground" />}
         href="/relatorios"
       />
       <DashboardCard
         title="Receita"
-        value={formatCurrency(receitaTotal)}
+        value={formatCurrency(stats.receitaTotal)}
         description="Receita total das vendas"
         icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
         href="/relatorios"
