@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CapacidadeProdutivaForm from '@/components/premissas/CapacidadeProdutiva';
 import DespesasFixasForm from '@/components/premissas/DespesasFixasForm';
 import MarkupForm from '@/components/premissas/MarkupForm';
+import MarkupDeliveryForm from '@/components/premissas/MarkupDeliveryForm';
 
 export default function Premissas() {
   const [activeTab, setActiveTab] = useState('capacidade');
@@ -23,10 +24,11 @@ export default function Premissas() {
         onValueChange={setActiveTab} 
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="capacidade">Capacidade Produtiva</TabsTrigger>
           <TabsTrigger value="despesas">Despesas Fixas</TabsTrigger>
-          <TabsTrigger value="markup">Markup</TabsTrigger>
+          <TabsTrigger value="markup">Markup Loja</TabsTrigger>
+          <TabsTrigger value="markup-delivery">Markup Delivery</TabsTrigger>
         </TabsList>
         
         {/* Tab de Capacidade Produtiva */}
@@ -52,6 +54,15 @@ export default function Premissas() {
           <Card>
             <CardContent className="pt-6">
               <MarkupForm />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Tab de Markup Delivery */}
+        <TabsContent value="markup-delivery">
+          <Card>
+            <CardContent className="pt-6">
+              <MarkupDeliveryForm />
             </CardContent>
           </Card>
         </TabsContent>

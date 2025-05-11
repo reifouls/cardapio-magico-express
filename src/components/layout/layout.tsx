@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ChefHat, Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile"; 
-import { PerformanceMetrics } from "@/components/monitoring/PerformanceMetrics";
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -67,8 +66,6 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
-      {/* If you want to keep the PerformanceMetrics box, leave this line. Otherwise, remove it. */}
-      {/* <PerformanceMetrics /> */}
     </div>
   );
 }
