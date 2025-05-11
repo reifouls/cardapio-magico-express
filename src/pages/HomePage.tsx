@@ -27,15 +27,7 @@ interface VendaAgregada {
   } | null;
 }
 
-// Define stats interface for type safety
-interface DashboardStatsData {
-  totalProdutos: number;
-  totalIngredientes: number;
-  mediaMargemProdutos: number;
-  totalCombos: number;
-  totalVendas: number;
-  receitaTotal: number;
-}
+// Remove duplicate DashboardStatsData interface as we're using DashboardStatsProps now
 
 export default function HomePage() {
   const { data: statsData = { 

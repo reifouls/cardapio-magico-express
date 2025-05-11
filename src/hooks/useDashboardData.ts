@@ -1,5 +1,6 @@
+
 import { useCache } from './useCache';
-import { DashboardStatsProps } from '../components/dashboard/dashboard-cards';
+import { DashboardStatsProps } from '../components/dashboard/dashboard-stats-types';
 
 export function useDashboardData(): [DashboardStatsProps | null, boolean, Error | null] {
   return useCache<DashboardStatsProps>(
