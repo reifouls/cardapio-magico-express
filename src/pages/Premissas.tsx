@@ -27,7 +27,7 @@ export default function Premissas() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="capacidade">Capacidade Produtiva</TabsTrigger>
           <TabsTrigger value="despesas">Despesas Fixas</TabsTrigger>
-          <TabsTrigger value="markup">Markup</TabsTrigger>
+          <TabsTrigger value="markup">Markup Loja</TabsTrigger>
           <TabsTrigger value="markup-delivery">Markup Delivery</TabsTrigger>
         </TabsList>
         

@@ -15,14 +15,9 @@ type Markup = {
   id: string;
   percentual_custos_fixos: number;
   percentual_impostos: number;
-  percentual_delivery: number;
   markup_loja: number;
-  markup_delivery: number;
-  markup_ponderado: number;
   margem_lucro_desejada: number;
   faturamento_desejado: number;
-  mix_vendas_loja: number;
-  mix_vendas_delivery: number;
 };
 
 // Constants for markup scenarios
@@ -46,25 +41,15 @@ export default function MarkupForm() {
   const [formData, setFormData] = useState<{
     faturamento_desejado: number;
     percentual_impostos_input: string;
-    percentual_delivery_input: string;
     margem_lucro_desejada_input: string;
     markup_loja: number;
-    markup_delivery: number;
-    markup_ponderado: number;
     percentual_custos_fixos: number;
-    mix_vendas_loja: number;
-    mix_vendas_delivery: number;
   }>({
     faturamento_desejado: 10000,
     percentual_impostos_input: '9',
-    percentual_delivery_input: '15',
     margem_lucro_desejada_input: '10',
     markup_loja: 2.0,
-    markup_delivery: 2.5,
-    markup_ponderado: 2.15,
-    percentual_custos_fixos: 0.3,
-    mix_vendas_loja: 70,
-    mix_vendas_delivery: 30
+    percentual_custos_fixos: 0.3
   });
 
   const [produtoExemplo, setProdutoExemplo] = useState({
@@ -92,14 +77,9 @@ export default function MarkupForm() {
       setFormData({
         faturamento_desejado: markup.faturamento_desejado || 10000,
         percentual_impostos_input: String((markup.percentual_impostos || 0.09) * 100),
-        percentual_delivery_input: String((markup.percentual_delivery || 0.15) * 100),
         margem_lucro_desejada_input: String((markup.margem_lucro_desejada || 0.1) * 100),
         markup_loja: markup.markup_loja || 2.0,
-        markup_delivery: markup.markup_delivery || 2.5,
-        markup_ponderado: markup.markup_ponderado || 2.15,
-        percentual_custos_fixos: markup.percentual_custos_fixos || 0.3,
-        mix_vendas_loja: markup.mix_vendas_loja !== undefined ? markup.mix_vendas_loja : 70,
-        mix_vendas_delivery: markup.mix_vendas_delivery !== undefined ? markup.mix_vendas_delivery : 30
+        percentual_custos_fixos: markup.percentual_custos_fixos || 0.3
       });
     } else if (totalDespesasFixas > 0) {
       // Calcular percentual de custos fixos a partir do faturamento desejado
@@ -130,27 +110,6 @@ export default function MarkupForm() {
     }
   );
 
-  // Calcula o markup ponderado baseado no mix de vendas
-  useEffect(() => {
-    const ponderado = (formData.markup_loja * (formData.mix_vendas_loja / 100)) + 
-                     (formData.markup_delivery * (formData.mix_vendas_delivery / 100));
-    
-    setFormData(prev => ({
-      ...prev,
-      markup_ponderado: parseFloat(ponderado.toFixed(2))
-    }));
-  }, [formData.markup_loja, formData.markup_delivery, formData.mix_vendas_loja, formData.mix_vendas_delivery]);
-
-  // Atualiza o mix de delivery quando o mix de loja mudar
-  const handleMixLojaChange = (value: number[]) => {
-    const mixLoja = value[0];
-    setFormData(prev => ({
-      ...prev,
-      mix_vendas_loja: mixLoja,
-      mix_vendas_delivery: 100 - mixLoja
-    }));
-  };
-
   const getMarkupScenario = (markup: number) => {
     if (markup < MARKUP_SCENARIOS.insuficiente.max) {
       return MARKUP_SCENARIOS.insuficiente;
@@ -163,20 +122,32 @@ export default function MarkupForm() {
 
   const handleSaveMarkup = async () => {
     const percentualImpostos = parseFloat(formData.percentual_impostos_input) / 100 || 0;
-    const percentualDelivery = parseFloat(formData.percentual_delivery_input) / 100 || 0;
     const margemLucroDesejada = parseFloat(formData.margem_lucro_desejada_input) / 100 || 0;
+    
+    // Get existing markup values to maintain them
+    const existingMarkup = await useSupabaseQuery<'premissas_markup', true, any>(
+      'premissas_markup', 
+      ['markup'],
+      { single: true }
+    ).data;
     
     const saveData = {
       percentual_custos_fixos: formData.percentual_custos_fixos,
       percentual_impostos: percentualImpostos,
-      percentual_delivery: percentualDelivery,
       margem_lucro_desejada: margemLucroDesejada,
       faturamento_desejado: formData.faturamento_desejado,
       markup_loja: formData.markup_loja,
-      markup_delivery: formData.markup_delivery,
-      markup_ponderado: formData.markup_ponderado,
-      mix_vendas_loja: formData.mix_vendas_loja,
-      mix_vendas_delivery: formData.mix_vendas_delivery
+      // Preserve existing delivery and mixed values
+      markup_delivery: existingMarkup?.markup_delivery || 2.5,
+      markup_ponderado: existingMarkup?.markup_ponderado || 2.15,
+      mix_vendas_loja: existingMarkup?.mix_vendas_loja || 70,
+      mix_vendas_delivery: existingMarkup?.mix_vendas_delivery || 30,
+      percentual_delivery: existingMarkup?.percentual_delivery || 0.15,
+      rateio_custos_fixos_criterio: existingMarkup?.rateio_custos_fixos_criterio || 'percentual_fixo',
+      rateio_custos_fixos_percentual: existingMarkup?.rateio_custos_fixos_percentual || 30,
+      taxa_marketplace: existingMarkup?.taxa_marketplace || 15,
+      custo_embalagem_percentual: existingMarkup?.custo_embalagem_percentual || 3,
+      outros_custos_delivery_percentual: existingMarkup?.outros_custos_delivery_percentual || 0
     };
 
     if (markup?.id) {
@@ -196,8 +167,8 @@ export default function MarkupForm() {
         <AlertDescription className="text-blue-800">
           <p className="font-medium">Como o markup é calculado:</p>
           <p className="text-sm mt-1">O markup é uma multiplicação aplicada sobre o custo para determinar o preço de venda. 
-          É calculado considerando custos fixos, impostos e, no caso do delivery, taxas extras.</p>
-          <p className="text-sm mt-1 font-medium">Para configurações avançadas de delivery, use a aba "Markup Delivery".</p>
+          É calculado considerando custos fixos, impostos e sua margem de lucro desejada.</p>
+          <p className="text-sm mt-1 font-medium">Para configurações de delivery, use a aba "Markup Delivery".</p>
         </AlertDescription>
       </Alert>
       
@@ -263,24 +234,6 @@ export default function MarkupForm() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="percentual_delivery">% Taxas Delivery</Label>
-              <Input
-                id="percentual_delivery"
-                type="number"
-                min="0"
-                max="100"
-                value={formData.percentual_delivery_input}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  percentual_delivery_input: e.target.value
-                })}
-              />
-              <p className="text-xs text-muted-foreground">
-                {formatarPercentual(parseFloat(formData.percentual_delivery_input) / 100 || 0)}
-              </p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="markup_loja">Markup Loja</Label>
               <Input
                 id="markup_loja"
@@ -298,74 +251,6 @@ export default function MarkupForm() {
                   {getMarkupScenario(formData.markup_loja).text}
                 </Badge>
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="markup_delivery">Markup Delivery</Label>
-              <Input
-                id="markup_delivery"
-                type="number"
-                min="1"
-                step="0.1"
-                value={formData.markup_delivery}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  markup_delivery: parseFloat(e.target.value) || 1
-                })}
-              />
-              <div className="flex items-center gap-2">
-                <Badge className={getMarkupScenario(formData.markup_delivery).color}>
-                  {getMarkupScenario(formData.markup_delivery).text}
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 pt-2">
-            <Label>Mix de Vendas</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Loja</span>
-                  <span className="text-sm">{formData.mix_vendas_loja}%</span>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Delivery</span>
-                  <span className="text-sm">{formData.mix_vendas_delivery}%</span>
-                </div>
-              </div>
-            </div>
-            <Slider
-              value={[formData.mix_vendas_loja]}
-              min={0}
-              max={100}
-              step={1}
-              onValueChange={handleMixLojaChange}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>0% Loja</span>
-              <span>100% Loja</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="markup_ponderado">Markup Ponderado (calculado)</Label>
-            <Input
-              id="markup_ponderado"
-              type="number"
-              value={formData.markup_ponderado}
-              readOnly
-              className="bg-gray-50"
-            />
-            <div className="flex items-center gap-2">
-              <Badge className={getMarkupScenario(formData.markup_ponderado).color}>
-                {getMarkupScenario(formData.markup_ponderado).text}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                Baseado no mix: {formData.mix_vendas_loja}% loja + {formData.mix_vendas_delivery}% delivery
-              </span>
             </div>
           </div>
 
@@ -413,10 +298,6 @@ export default function MarkupForm() {
                 </div>
                 <div>Preço Loja:</div>
                 <div>{formatCurrency(produtoExemplo.custoPorPorcao * formData.markup_loja)}</div>
-                <div>Preço Delivery:</div>
-                <div>{formatCurrency(produtoExemplo.custoPorPorcao * formData.markup_delivery)}</div>
-                <div>Preço Ponderado:</div>
-                <div>{formatCurrency(produtoExemplo.custoPorPorcao * formData.markup_ponderado)}</div>
               </div>
             </div>
           </div>
