@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { ArrowDownIcon, ArrowUpIcon, TrendingUpIcon } from "lucide-react";
+import { DashboardStatsProps } from "@/components/dashboard/dashboard-stats-types";
 
 // Add interface definitions for better type safety
 interface VendaData {
@@ -44,7 +45,7 @@ export default function HomePage() {
     totalCombos: 0,
     totalVendas: 0,
     receitaTotal: 0
-  }, isLoading: statsLoading } = useQuery<DashboardStatsData>({
+  }, isLoading: statsLoading } = useQuery<DashboardStatsProps>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
       // Obter contagem de produtos
@@ -303,14 +304,7 @@ export default function HomePage() {
         Bem-vindo ao Cardápio Mágico Express. Gerencie suas fichas técnicas e otimize sua precificação.
       </p>
 
-      <DashboardStats 
-        totalProdutos={statsData.totalProdutos}
-        totalIngredientes={statsData.totalIngredientes}
-        mediaMargemProdutos={statsData.mediaMargemProdutos}
-        totalCombos={statsData.totalCombos}
-        totalVendas={statsData.totalVendas}
-        receitaTotal={statsData.receitaTotal}
-      />
+      <DashboardStats {...statsData} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <RecentesList

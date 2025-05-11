@@ -108,11 +108,22 @@ export function useMarkupDelivery() {
     try {
       // Create a complete data object with required fields
       const completeData = {
-        ...data,
-        markup_loja: markup?.markup_loja || 2.0,
-        markup_ponderado: markup?.markup_ponderado || data.markup_delivery || 2.0,
-        // Ensure markup_delivery is always defined
-        markup_delivery: data.markup_delivery || markup?.markup_delivery || 2.5
+        // Ensure all required fields are present
+        percentual_custos_fixos: data.percentual_custos_fixos ?? markup?.percentual_custos_fixos ?? 0,
+        percentual_impostos: data.percentual_impostos ?? markup?.percentual_impostos ?? 0,
+        percentual_delivery: data.percentual_delivery ?? markup?.percentual_delivery ?? 0,
+        markup_loja: data.markup_loja ?? markup?.markup_loja ?? 2.0,
+        markup_delivery: data.markup_delivery ?? markup?.markup_delivery ?? 2.5,
+        markup_ponderado: data.markup_ponderado ?? markup?.markup_ponderado ?? 2.0,
+        // Optional fields
+        id: markup?.id,
+        rateio_custos_fixos_criterio: data.rateio_custos_fixos_criterio ?? markup?.rateio_custos_fixos_criterio ?? 'percentual_fixo',
+        rateio_custos_fixos_percentual: data.rateio_custos_fixos_percentual ?? markup?.rateio_custos_fixos_percentual ?? 30,
+        taxa_marketplace: data.taxa_marketplace ?? markup?.taxa_marketplace ?? 15,
+        custo_embalagem_percentual: data.custo_embalagem_percentual ?? markup?.custo_embalagem_percentual ?? 3,
+        outros_custos_delivery_percentual: data.outros_custos_delivery_percentual ?? markup?.outros_custos_delivery_percentual ?? 0,
+        margem_lucro_desejada: data.margem_lucro_desejada ?? markup?.margem_lucro_desejada ?? 0.1,
+        faturamento_desejado: data.faturamento_desejado ?? markup?.faturamento_desejado ?? 10000
       };
       
       if (markup?.id) {
