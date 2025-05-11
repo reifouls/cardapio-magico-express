@@ -111,6 +111,8 @@ export function useMarkupDelivery() {
         ...data,
         markup_loja: markup?.markup_loja || 2.0,
         markup_ponderado: markup?.markup_ponderado || data.markup_delivery || 2.0,
+        // Ensure markup_delivery is always defined
+        markup_delivery: data.markup_delivery || markup?.markup_delivery || 2.5
       };
       
       if (markup?.id) {

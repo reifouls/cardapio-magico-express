@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -180,7 +179,7 @@ export default function MarkupDeliveryForm() {
     if (typeof value === 'number') {
       return `${value.toFixed(1)}%`;
     }
-    return `${value}%`;
+    return value ? `${value}%` : '0%';
   };
 
   return (

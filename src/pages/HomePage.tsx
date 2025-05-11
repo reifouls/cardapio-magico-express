@@ -27,13 +27,13 @@ interface VendaAgregada {
 }
 
 // Define stats interface for type safety
-interface DashboardStatsProps {
-  totalProdutos?: number;
-  totalIngredientes?: number;
-  mediaMargemProdutos?: number;
-  totalCombos?: number;
-  totalVendas?: number;
-  receitaTotal?: number;
+interface DashboardStatsData {
+  totalProdutos: number;
+  totalIngredientes: number;
+  mediaMargemProdutos: number;
+  totalCombos: number;
+  totalVendas: number;
+  receitaTotal: number;
 }
 
 export default function HomePage() {
@@ -44,7 +44,7 @@ export default function HomePage() {
     totalCombos: 0,
     totalVendas: 0,
     receitaTotal: 0
-  }, isLoading: statsLoading } = useQuery<DashboardStatsProps>({
+  }, isLoading: statsLoading } = useQuery<DashboardStatsData>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
       // Obter contagem de produtos
