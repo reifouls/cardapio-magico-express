@@ -14,6 +14,7 @@ type MarkupDelivery = {
   outros_custos_delivery_percentual: number;
   markup_delivery: number;
   margem_lucro_desejada: number;
+  faturamento_desejado: number;
 };
 
 export function useMarkupDelivery() {
@@ -102,14 +103,22 @@ export function useMarkupDelivery() {
 
   // Save markup delivery settings
   const saveMarkupDelivery = async (data: Omit<MarkupDelivery, 'id'>) => {
+    // We need to provide default values for required fields that might not be part of our data
+    const completeData = {
+      ...data,
+      // Add required fields if they don't exist in the data
+      markup_loja: markup?.markup_loja || 2.0,
+      markup_ponderado: markup?.markup_ponderado || data.markup_delivery || 2.0,
+    };
+    
     if (markup?.id) {
       await updateMarkup({
         id: markup.id,
-        data
+        data: completeData
       });
       return true;
     } else {
-      await insertMarkup(data);
+      await insertMarkup(completeData);
       return true;
     }
     return false;

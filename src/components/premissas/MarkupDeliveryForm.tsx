@@ -162,7 +162,8 @@ export default function MarkupDeliveryForm() {
       custo_embalagem_percentual: formData.custo_embalagem_percentual,
       outros_custos_delivery_percentual: formData.outros_custos_delivery_percentual,
       markup_delivery: formData.markup_delivery,
-      margem_lucro_desejada: formData.margem_lucro_desejada / 100
+      margem_lucro_desejada: formData.margem_lucro_desejada / 100,
+      faturamento_desejado: formData.faturamento_delivery
     });
   };
 
@@ -172,6 +173,14 @@ export default function MarkupDeliveryForm() {
       ...prev,
       [field]: typeof value === 'string' ? parseFloat(value) || 0 : value
     }));
+  };
+
+  // Fix for the PieChart tooltip formatter
+  const tooltipFormatter = (value: any) => {
+    if (typeof value === 'number') {
+      return `${value.toFixed(1)}%`;
+    }
+    return `${value}%`;
   };
 
   return (
@@ -399,7 +408,7 @@ export default function MarkupDeliveryForm() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
+                    <Tooltip formatter={tooltipFormatter} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
