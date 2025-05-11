@@ -197,6 +197,7 @@ export default function MarkupForm() {
           <p className="font-medium">Como o markup é calculado:</p>
           <p className="text-sm mt-1">O markup é uma multiplicação aplicada sobre o custo para determinar o preço de venda. 
           É calculado considerando custos fixos, impostos e, no caso do delivery, taxas extras.</p>
+          <p className="text-sm mt-1 font-medium">Para configurações avançadas de delivery, use a aba "Markup Delivery".</p>
         </AlertDescription>
       </Alert>
       

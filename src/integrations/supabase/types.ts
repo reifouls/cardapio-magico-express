@@ -93,24 +93,6 @@ export type Database = {
         }
         Relationships: []
       }
-      Emails_lp_bussola: {
-        Row: {
-          created_at: string
-          email: string | null
-          id: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          id?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          id?: string
-        }
-        Relationships: []
-      }
       ficha_tecnica: {
         Row: {
           created_at: string
@@ -290,6 +272,7 @@ export type Database = {
       premissas_markup: {
         Row: {
           created_at: string
+          custo_embalagem_percentual: number | null
           faturamento_desejado: number | null
           id: string
           margem_lucro_desejada: number | null
@@ -298,12 +281,17 @@ export type Database = {
           markup_ponderado: number
           mix_vendas_delivery: number | null
           mix_vendas_loja: number | null
+          outros_custos_delivery_percentual: number | null
           percentual_custos_fixos: number
           percentual_delivery: number
           percentual_impostos: number
+          rateio_custos_fixos_criterio: string | null
+          rateio_custos_fixos_percentual: number | null
+          taxa_marketplace: number | null
         }
         Insert: {
           created_at?: string
+          custo_embalagem_percentual?: number | null
           faturamento_desejado?: number | null
           id?: string
           margem_lucro_desejada?: number | null
@@ -312,12 +300,17 @@ export type Database = {
           markup_ponderado: number
           mix_vendas_delivery?: number | null
           mix_vendas_loja?: number | null
+          outros_custos_delivery_percentual?: number | null
           percentual_custos_fixos: number
           percentual_delivery: number
           percentual_impostos: number
+          rateio_custos_fixos_criterio?: string | null
+          rateio_custos_fixos_percentual?: number | null
+          taxa_marketplace?: number | null
         }
         Update: {
           created_at?: string
+          custo_embalagem_percentual?: number | null
           faturamento_desejado?: number | null
           id?: string
           margem_lucro_desejada?: number | null
@@ -326,9 +319,13 @@ export type Database = {
           markup_ponderado?: number
           mix_vendas_delivery?: number | null
           mix_vendas_loja?: number | null
+          outros_custos_delivery_percentual?: number | null
           percentual_custos_fixos?: number
           percentual_delivery?: number
           percentual_impostos?: number
+          rateio_custos_fixos_criterio?: string | null
+          rateio_custos_fixos_percentual?: number | null
+          taxa_marketplace?: number | null
         }
         Relationships: []
       }

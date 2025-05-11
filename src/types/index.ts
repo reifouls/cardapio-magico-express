@@ -1,4 +1,3 @@
-
 export interface Categoria {
   id: string;
   nome: string;
@@ -138,5 +137,14 @@ export interface PremissaMarkup {
   markup_loja: number;
   markup_delivery: number;
   markup_ponderado: number;
+  mix_vendas_loja: number;
+  mix_vendas_delivery: number;
+  rateio_custos_fixos_criterio: string;
+  rateio_custos_fixos_percentual: number;
+  taxa_marketplace: number;
+  custo_embalagem_percentual: number;
+  outros_custos_delivery_percentual: number;
+  margem_lucro_desejada: number;
+  faturamento_desejado: number;
   created_at: string;
 }
