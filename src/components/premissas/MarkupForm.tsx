@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +17,16 @@ type Markup = {
   markup_loja: number;
   margem_lucro_desejada: number;
   faturamento_desejado: number;
+  markup_delivery: number;
+  markup_ponderado: number;
+  mix_vendas_loja: number;
+  mix_vendas_delivery: number;
+  percentual_delivery: number;
+  rateio_custos_fixos_criterio: string;
+  rateio_custos_fixos_percentual: number;
+  taxa_marketplace: number;
+  custo_embalagem_percentual: number;
+  outros_custos_delivery_percentual: number;
 };
 
 // Constants for markup scenarios
@@ -102,6 +111,20 @@ export default function MarkupForm() {
     }
   }, [formData.faturamento_desejado, totalDespesasFixas]);
 
+  // Calcular markup loja quando os percentuais mudarem
+  useEffect(() => {
+    const percentualImpostos = parseFloat(formData.percentual_impostos_input) / 100 || 0;
+    const margemLucroDesejada = parseFloat(formData.margem_lucro_desejada_input) / 100 || 0;
+    const soma = formData.percentual_custos_fixos + percentualImpostos + margemLucroDesejada;
+    
+    if (soma >= 1) {
+      setFormData(prev => ({ ...prev, markup_loja: Infinity }));
+    } else {
+      const markup = 1 / (1 - soma);
+      setFormData(prev => ({ ...prev, markup_loja: markup }));
+    }
+  }, [formData.percentual_impostos_input, formData.margem_lucro_desejada_input, formData.percentual_custos_fixos]);
+
   const { update: updateMarkup, insert: insertMarkup } = useSupabaseMutation<'premissas_markup'>(
     'premissas_markup',
     {
@@ -124,13 +147,6 @@ export default function MarkupForm() {
     const percentualImpostos = parseFloat(formData.percentual_impostos_input) / 100 || 0;
     const margemLucroDesejada = parseFloat(formData.margem_lucro_desejada_input) / 100 || 0;
     
-    // Get existing markup values to maintain them
-    const existingMarkup = await useSupabaseQuery<'premissas_markup', true, any>(
-      'premissas_markup', 
-      ['markup'],
-      { single: true }
-    ).data;
-    
     const saveData = {
       percentual_custos_fixos: formData.percentual_custos_fixos,
       percentual_impostos: percentualImpostos,
@@ -138,25 +154,29 @@ export default function MarkupForm() {
       faturamento_desejado: formData.faturamento_desejado,
       markup_loja: formData.markup_loja,
       // Preserve existing delivery and mixed values
-      markup_delivery: existingMarkup?.markup_delivery || 2.5,
-      markup_ponderado: existingMarkup?.markup_ponderado || 2.15,
-      mix_vendas_loja: existingMarkup?.mix_vendas_loja || 70,
-      mix_vendas_delivery: existingMarkup?.mix_vendas_delivery || 30,
-      percentual_delivery: existingMarkup?.percentual_delivery || 0.15,
-      rateio_custos_fixos_criterio: existingMarkup?.rateio_custos_fixos_criterio || 'percentual_fixo',
-      rateio_custos_fixos_percentual: existingMarkup?.rateio_custos_fixos_percentual || 30,
-      taxa_marketplace: existingMarkup?.taxa_marketplace || 15,
-      custo_embalagem_percentual: existingMarkup?.custo_embalagem_percentual || 3,
-      outros_custos_delivery_percentual: existingMarkup?.outros_custos_delivery_percentual || 0
+      markup_delivery: markup?.markup_delivery || 2.5,
+      markup_ponderado: markup?.markup_ponderado || 2.15,
+      mix_vendas_loja: markup?.mix_vendas_loja || 70,
+      mix_vendas_delivery: markup?.mix_vendas_delivery || 30,
+      percentual_delivery: markup?.percentual_delivery || 0.15,
+      rateio_custos_fixos_criterio: markup?.rateio_custos_fixos_criterio || 'percentual_fixo',
+      rateio_custos_fixos_percentual: markup?.rateio_custos_fixos_percentual || 30,
+      taxa_marketplace: markup?.taxa_marketplace || 15,
+      custo_embalagem_percentual: markup?.custo_embalagem_percentual || 3,
+      outros_custos_delivery_percentual: markup?.outros_custos_delivery_percentual || 0
     };
 
-    if (markup?.id) {
-      await updateMarkup({
-        id: markup.id,
-        data: saveData
-      });
-    } else {
-      await insertMarkup(saveData);
+    try {
+      if (markup?.id) {
+        await updateMarkup({
+          id: markup.id,
+          data: saveData
+        });
+      } else {
+        await insertMarkup(saveData);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar markup:', error);
     }
   };
 
@@ -241,10 +261,8 @@ export default function MarkupForm() {
                 min="1"
                 step="0.1"
                 value={formData.markup_loja}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  markup_loja: parseFloat(e.target.value) || 1
-                })}
+                readOnly
+                className="bg-gray-50"
               />
               <div className="flex items-center gap-2">
                 <Badge className={getMarkupScenario(formData.markup_loja).color}>

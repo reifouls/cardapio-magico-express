@@ -4,12 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { formatarPercentual, formatCurrency } from "@/lib/utils";
 import { Save, Info, Calculator } from 'lucide-react';
-import { useMarkupDelivery } from '@/hooks/useMarkupDelivery';
+import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useMarkupDelivery } from '@/hooks/useMarkupDelivery';
 
 // Constants for markup scenarios - same as in MarkupForm for consistency
 const MARKUP_SCENARIOS = {
@@ -170,7 +171,7 @@ export default function MarkupDeliveryForm() {
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
-      [field]: typeof value === 'string' ? parseFloat(value) || 0 : value
+      [field]: field === 'rateio_custos_fixos_criterio' ? value : (typeof value === 'string' ? parseFloat(value) || 0 : value)
     }));
   };
 

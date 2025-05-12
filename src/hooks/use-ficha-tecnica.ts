@@ -1,7 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
+import { useQueryClient } from '@tanstack/react-query';
 import { Database } from '@/integrations/supabase/types';
+import { toast } from '@/components/ui/sonner';
 
 // Define proper types for our data
 type Produto = Database['public']['Tables']['produtos']['Row'];
@@ -27,9 +28,10 @@ interface UseFichaTecnicaOptions {
 export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
   const [currentProduto, setCurrentProduto] = useState<Partial<Produto> | null>(null);
   const [ingredientes, setIngredientes] = useState<{id: string, quantidade: number}[]>([]);
+  const queryClient = useQueryClient();
 
   // Query for all produtos
-  const { data: produtos, isLoading } = useSupabaseQuery<
+  const { data: produtos, isLoading, refetch: refetchProdutos } = useSupabaseQuery<
     'produtos',
     false,
     ProdutoWithFichaTecnica[]
@@ -52,7 +54,7 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
     ['by-produto', currentProduto?.id || ''],
     { 
       select: '*, ingrediente:ingrediente_id(*)',
-      filter: { column: 'produto_id', value: currentProduto?.id || '' },
+      filter: { produto_id: currentProduto?.id },
       enabled: !!currentProduto?.id
     }
   );
@@ -76,15 +78,18 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
   } = useSupabaseMutation<'ficha_tecnica'>(
     'ficha_tecnica',
     {
-      onSuccessMessage: options?.onSuccessMessage || 'Ficha técnica salva com sucesso!',
       queryKeyToInvalidate: ['produtos', 'list', 'ficha_tecnica']
     }
   );
 
-  // Load ficha_tecnica when editing
+  // Limpar ingredientes ao trocar de produto
   useEffect(() => {
-    if (fichaTecnica && fichaTecnica.length > 0 && currentProduto?.id) {
-      // Map ficha_tecnica to ingredientes state format
+    setIngredientes([]);
+  }, [currentProduto?.id]);
+
+  // Popula ingredientes ao carregar ficha tecnica
+  useEffect(() => {
+    if (fichaTecnica && currentProduto?.id) {
       setIngredientes(
         fichaTecnica.map(item => ({
           id: item.ingrediente_id,
@@ -92,7 +97,7 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
         }))
       );
     }
-  }, [fichaTecnica, currentProduto]);
+  }, [fichaTecnica, currentProduto?.id]);
 
   // Reset ingredientes when creating new
   const handleNewProduto = () => {
@@ -107,20 +112,22 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
   // Handle editing existing produto
   const handleEditProduto = (produto: ProdutoWithFichaTecnica) => {
     setCurrentProduto(produto);
-    setIngredientes([]);
-    refetchFichaTecnica();
   };
+
+  // Novo useEffect para buscar ficha técnica correta ao editar
+  useEffect(() => {
+    if (currentProduto?.id) {
+      refetchFichaTecnica();
+    }
+  }, [currentProduto?.id]);
 
   // Save produto and ficha tecnica
   const handleSaveProduto = async () => {
-    if (!currentProduto?.nome || !currentProduto.rendimento) return;
-    
+    if (!currentProduto?.nome || !currentProduto.rendimento) return false;
     try {
       let produtoId = currentProduto.id;
-      
       // Insert or update produto
       if (!produtoId) {
-        // Insert new produto
         const produtoToInsert = {
           nome: currentProduto.nome,
           rendimento: currentProduto.rendimento,
@@ -128,41 +135,69 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
           categoria_id: currentProduto.categoria_id,
           custo_total_receita: currentProduto.custo_total_receita,
           custo_por_porcao: currentProduto.custo_por_porcao,
-          preco_definido: currentProduto.preco_definido,
+          preco_definido:
+            typeof currentProduto.preco_definido === 'string'
+              ? (currentProduto.preco_definido as string).trim() === '' ? null : parseFloat(currentProduto.preco_definido as string)
+              : currentProduto.preco_definido ?? null,
           preco_sugerido: currentProduto.preco_sugerido,
           margem: currentProduto.margem
         };
-        
-        const newProduto = await insertProduto(produtoToInsert);
+        console.log('Produto a ser inserido:', produtoToInsert);
+        let newProduto;
+        try {
+          newProduto = await insertProduto(produtoToInsert);
+        } catch (err) {
+          toast.error('Erro real do Supabase: ' + (err?.message || JSON.stringify(err)));
+          console.error('Erro real do Supabase ao inserir produto:', err);
+          throw err;
+        }
         produtoId = newProduto?.[0]?.id;
+        if (!produtoId) throw new Error('Erro ao inserir produto');
       } else {
-        // Update existing produto
         await updateProduto({
           id: produtoId,
-          data: currentProduto
+          data: {
+            ...currentProduto,
+            preco_definido:
+              typeof currentProduto.preco_definido === 'string'
+                ? (currentProduto.preco_definido as string).trim() === '' ? null : parseFloat(currentProduto.preco_definido as string)
+                : currentProduto.preco_definido ?? null
+          }
         });
-        
-        // Remove existing ficha_tecnica entries
-        await removeFichaTecnica(`produto_id.eq.${produtoId}`);
+        await removeFichaTecnica('produto_id', produtoId);
       }
-
-      // Insert or update ficha_tecnica entries
+      // Filtrar ingredientes duplicados
+      const ingredientesUnicos = ingredientes.filter((item, index, self) =>
+        index === self.findIndex(i => i.id === item.id)
+      );
+      console.log('Ingredientes a serem inseridos:', ingredientesUnicos);
+      // Insert ficha_tecnica
       if (produtoId) {
-        for (const ingrediente of ingredientes) {
+        console.log('ProdutoId para inserir ingredientes:', produtoId);
+        for (const ingrediente of ingredientesUnicos) {
           if (ingrediente.quantidade > 0) {
-            await insertFichaTecnica({
-              produto_id: produtoId,
-              ingrediente_id: ingrediente.id,
-              quantidade_utilizada: ingrediente.quantidade
-            });
+            try {
+              await insertFichaTecnica({
+                produto_id: produtoId,
+                ingrediente_id: ingrediente.id,
+                quantidade_utilizada: ingrediente.quantidade
+              });
+            } catch (err) {
+              console.error('Erro ao inserir ingrediente na ficha técnica:', err);
+              throw err;
+            }
           }
         }
       }
-
-      // Reset state
+      toast.success('Ficha técnica salva com sucesso!');
+      // Refetch ficha técnica e produtos para garantir sincronização
+      await refetchFichaTecnica();
+      await refetchProdutos();
+      await queryClient.invalidateQueries({ queryKey: ['produtos', 'list'] });
       return true;
-    } catch (error) {
-      console.error("Erro ao salvar:", error);
+    } catch (error: any) {
+      toast.error('Erro ao salvar produto/ficha técnica: ' + (error?.message || error));
+      console.error('Erro ao salvar produto/ficha técnica:', error);
       return false;
     }
   };

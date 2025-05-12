@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatarPercentual } from "@/lib/utils";
+import { formatCurrency, formatarPercentual, calcularMargem } from "@/lib/utils";
 import { X, Plus, Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SheetFooter } from '@/components/ui/sheet';
@@ -193,7 +192,7 @@ export default function FichaTecnicaForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="space-y-2">
           <Label>Custo Total da Receita</Label>
           <Input
@@ -203,7 +202,6 @@ export default function FichaTecnicaForm({
             className="bg-gray-50"
           />
         </div>
-        
         <div className="space-y-2">
           <Label>Custo por Porção</Label>
           <Input
@@ -213,7 +211,6 @@ export default function FichaTecnicaForm({
             className="bg-gray-50"
           />
         </div>
-        
         <div className="space-y-2">
           <Label>Preço Sugerido Loja</Label>
           <Input
@@ -223,7 +220,6 @@ export default function FichaTecnicaForm({
             className="bg-gray-50"
           />
         </div>
-        
         <div className="space-y-2">
           <Label>Preço Sugerido Delivery</Label>
           <Input
@@ -233,15 +229,14 @@ export default function FichaTecnicaForm({
             className="bg-gray-50"
           />
         </div>
-
         <div className="space-y-2">
           <Label>Margem Estimada</Label>
           <Input
             type="text"
             value={formatarPercentual(
-              currentProduto?.preco_definido 
-                ? (currentProduto.preco_definido - custoPorPorcao) / currentProduto.preco_definido 
-                : (precoSugeridoLoja - custoPorPorcao) / precoSugeridoLoja
+              currentProduto?.preco_definido && currentProduto?.preco_definido > 0
+                ? calcularMargem(currentProduto.preco_definido, custoPorPorcao)
+                : (precoSugeridoLoja > 0 ? calcularMargem(precoSugeridoLoja, custoPorPorcao) : 0)
             )}
             readOnly
             className="bg-gray-50"
@@ -261,50 +256,62 @@ export default function FichaTecnicaForm({
           <p className="text-sm text-muted-foreground">Nenhum ingrediente adicionado.</p>
         )}
 
-        {ingredientes.map((item, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <div className="flex-1">
-              <Select 
-                value={item.id} 
-                onValueChange={(value) => {
-                  const newIngredientes = [...ingredientes];
-                  newIngredientes[index].id = value;
-                  setIngredientes(newIngredientes);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ingredientesList?.map((ing) => (
-                    <SelectItem key={ing.id} value={ing.id}>
-                      {ing.nome} ({ing.unidade})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {ingredientes.map((item, index) => {
+          const ingrediente = ingredientesList?.find(i => i.id === item.id);
+          const custoUnitario = ingrediente ? ingrediente.custo_unitario : 0;
+          const unidade = ingrediente ? ingrediente.unidade : '';
+          const custoNaReceita = custoUnitario * item.quantidade;
+          return (
+            <div key={index} className="flex items-center gap-2 w-full">
+              <div className="flex-1">
+                <Select 
+                  value={item.id} 
+                  onValueChange={(value) => {
+                    const newIngredientes = [...ingredientes];
+                    newIngredientes[index].id = value;
+                    setIngredientes(newIngredientes);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ingredientesList?.map((ing) => (
+                      <SelectItem key={ing.id} value={ing.id}>
+                        {ing.nome} ({ing.unidade})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-24">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={item.quantidade}
+                  onChange={(e) => {
+                    const newIngredientes = [...ingredientes];
+                    newIngredientes[index].quantidade = parseFloat(e.target.value) || 0;
+                    setIngredientes(newIngredientes);
+                  }}
+                />
+              </div>
+              {ingrediente && (
+                <div className="text-xs text-muted-foreground min-w-[120px] text-right">
+                  {formatCurrency(custoUnitario)} / {unidade}<br />
+                  <span className="font-medium">{formatCurrency(custoNaReceita)}</span> na receita
+                </div>
+              )}
+              <Button variant="ghost" size="icon" onClick={() => handleRemoveIngrediente(index)}>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-            <div className="w-24">
-              <Input
-                type="number"
-                step="0.01"
-                value={item.quantidade}
-                onChange={(e) => {
-                  const newIngredientes = [...ingredientes];
-                  newIngredientes[index].quantidade = parseFloat(e.target.value) || 0;
-                  setIngredientes(newIngredientes);
-                }}
-              />
-            </div>
-            <Button variant="ghost" size="icon" onClick={() => handleRemoveIngrediente(index)}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       <SheetFooter>
-        <Button onClick={onSave} className="w-full">
+        <Button onClick={onSave} className="w-full" disabled={!ingredientesList}>
           <Save className="mr-2 h-4 w-4" />
           Salvar Ficha Técnica
         </Button>
