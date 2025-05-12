@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { DataTable } from '@/components/ui/data-table';
 import { formatCurrency, formatarPercentual } from '@/lib/utils';
-import { ProdutoWithFichaTecnica } from '@/hooks/use-ficha-tecnica';
+import { ProdutoWithFichaTecnica } from '@/types/ficha-tecnica.types';
 
 interface ProdutoDataTableProps {
   produtos: ProdutoWithFichaTecnica[];

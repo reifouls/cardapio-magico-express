@@ -2,17 +2,15 @@
 import React, { useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import FichaTecnicaForm from '@/components/fichas-tecnicas/FichaTecnicaForm';
-import { Database } from '@/integrations/supabase/types';
-
-type Produto = Database['public']['Tables']['produtos']['Row'];
+import { ProdutoWithFichaTecnica, IngredienteQuantidade } from '@/types/ficha-tecnica.types';
 
 interface FichaTecnicaSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  currentProduto: Partial<Produto> | null;
-  setCurrentProduto: React.Dispatch<React.SetStateAction<Partial<Produto> | null>>;
-  ingredientes: {id: string, quantidade: number}[];
-  setIngredientes: React.Dispatch<React.SetStateAction<{id: string, quantidade: number}[]>>;
+  currentProduto: Partial<ProdutoWithFichaTecnica> | null;
+  setCurrentProduto: React.Dispatch<React.SetStateAction<Partial<ProdutoWithFichaTecnica> | null>>;
+  ingredientes: IngredienteQuantidade[];
+  setIngredientes: React.Dispatch<React.SetStateAction<IngredienteQuantidade[]>>;
   onSave: () => Promise<boolean>;
 }
 
