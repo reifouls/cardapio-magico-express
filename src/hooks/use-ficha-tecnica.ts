@@ -5,8 +5,14 @@ import { ProdutoWithFichaTecnica, UseFichaTecnicaOptions } from '@/types/ficha-t
 import { useProdutoState } from '@/hooks/ficha-tecnica/use-produto-state';
 import { useIngredientesState } from '@/hooks/ficha-tecnica/use-ingredientes-state';
 import { useSaveProduto } from '@/hooks/ficha-tecnica/use-save-produto';
+import type { Database } from '@/integrations/supabase/types';
 
-export { ProdutoWithFichaTecnica };
+// Export types with the 'export type' syntax
+export type { ProdutoWithFichaTecnica };
+
+// Define missing types
+type FichaTecnica = Database['public']['Tables']['ficha_tecnica']['Row'];
+type Ingrediente = Database['public']['Tables']['ingredientes']['Row'];
 
 export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
   const {
