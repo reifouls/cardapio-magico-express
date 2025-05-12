@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import FichaTecnicaForm from '@/components/fichas-tecnicas/FichaTecnicaForm';
 import { Database } from '@/integrations/supabase/types';
@@ -25,7 +25,16 @@ const FichaTecnicaSheet: React.FC<FichaTecnicaSheetProps> = ({
   setIngredientes,
   onSave
 }) => {
+  // Log when the sheet opens with product and ingredients data
+  useEffect(() => {
+    if (isOpen) {
+      console.log('Sheet opened with produto:', currentProduto);
+      console.log('Ingredients loaded:', ingredientes);
+    }
+  }, [isOpen, currentProduto, ingredientes]);
+  
   const handleSave = async () => {
+    console.log('Saving with ingredients:', ingredientes);
     const success = await onSave();
     if (success) {
       onOpenChange(false);

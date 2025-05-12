@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { useFichaTecnica } from '@/hooks/use-ficha-tecnica';
 import ProdutoDataTable from '@/components/fichas-tecnicas/ProdutoDataTable';
 import FichaTecnicaSheet from '@/components/fichas-tecnicas/FichaTecnicaSheet';
 import { useSupabaseMutation } from '@/hooks/use-supabase';
+import { toast } from '@/components/ui/sonner';
 
 export default function FichasTecnicas() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -19,7 +21,8 @@ export default function FichasTecnicas() {
     setIngredientes,
     handleNewProduto,
     handleEditProduto,
-    handleSaveProduto
+    handleSaveProduto,
+    refetchFichaTecnica
   } = useFichaTecnica();
 
   const { remove: deleteProduto } = useSupabaseMutation<'produtos'>('produtos', {
@@ -34,7 +37,14 @@ export default function FichasTecnicas() {
   };
 
   const handleEditClick = (produto: any) => {
+    console.log('Edit clicked for produto:', produto);
     handleEditProduto(produto);
+    
+    // Force fetch ficha tecnica data after a short delay to ensure everything is loaded
+    setTimeout(() => {
+      refetchFichaTecnica();
+    }, 100);
+    
     setIsFormOpen(true);
   };
 
@@ -49,11 +59,18 @@ export default function FichasTecnicas() {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    if (window.confirm('Tem certeza que deseja excluir os produtos selecionados? Esta ação é irreversível!')) {
-      for (const id of selectedIds) {
-        await deleteProduto(id);
+    
+    try {
+      if (window.confirm('Tem certeza que deseja excluir os produtos selecionados? Esta ação é irreversível!')) {
+        for (const id of selectedIds) {
+          await deleteProduto(id);
+        }
+        setSelectedIds([]);
+        toast.success('Produtos excluídos com sucesso!');
       }
-      setSelectedIds([]);
+    } catch (error) {
+      console.error('Erro ao excluir produtos:', error);
+      toast.error('Erro ao excluir produtos');
     }
   };
 

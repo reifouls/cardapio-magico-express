@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSupabaseQuery, useSupabaseMutation } from '@/hooks/use-supabase';
 import { useQueryClient } from '@tanstack/react-query';
@@ -82,20 +83,24 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
     }
   );
 
-  // Limpar ingredientes ao trocar de produto
-  useEffect(() => {
-    setIngredientes([]);
-  }, [currentProduto?.id]);
-
+  // Don't clear ingredients when product ID changes - this was causing the issue
+  // We only want to clear ingredients when creating a new product, not when editing
+  
   // Popula ingredientes ao carregar ficha tecnica
   useEffect(() => {
     if (fichaTecnica && currentProduto?.id) {
-      setIngredientes(
-        fichaTecnica.map(item => ({
-          id: item.ingrediente_id,
-          quantidade: item.quantidade_utilizada
-        }))
-      );
+      console.log('Loaded ficha tecnica:', fichaTecnica);
+      
+      // Only set ingredients if we have ficha tecnica data and the ingredients array is empty
+      // This prevents overwriting user edits when the effect runs multiple times
+      if (fichaTecnica.length > 0) {
+        setIngredientes(
+          fichaTecnica.map(item => ({
+            id: item.ingrediente_id,
+            quantidade: item.quantidade_utilizada
+          }))
+        );
+      }
     }
   }, [fichaTecnica, currentProduto?.id]);
 
@@ -111,15 +116,30 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
 
   // Handle editing existing produto
   const handleEditProduto = (produto: ProdutoWithFichaTecnica) => {
+    console.log('Editing produto:', produto);
     setCurrentProduto(produto);
+    
+    // If we have ficha_tecnica data directly on the produto, use it immediately
+    if (produto.ficha_tecnica && produto.ficha_tecnica.length > 0) {
+      console.log('Using ingredients from produto.ficha_tecnica:', produto.ficha_tecnica);
+      setIngredientes(
+        produto.ficha_tecnica.map(item => ({
+          id: item.ingrediente_id,
+          quantidade: item.quantidade_utilizada
+        }))
+      );
+    } else {
+      console.log('No ficha_tecnica on produto, will fetch separately');
+    }
   };
 
-  // Novo useEffect para buscar ficha técnica correta ao editar
+  // Explicitly fetch ficha técnica when editing a product
   useEffect(() => {
     if (currentProduto?.id) {
+      console.log('Fetching ficha tecnica for produto:', currentProduto.id);
       refetchFichaTecnica();
     }
-  }, [currentProduto?.id]);
+  }, [currentProduto?.id, refetchFichaTecnica]);
 
   // Save produto and ficha tecnica
   const handleSaveProduto = async () => {
@@ -164,13 +184,19 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
                 : currentProduto.preco_definido ?? null
           }
         });
+        
+        // First remove all existing ingredients for this product
+        console.log('Removing existing ingredients for produto:', produtoId);
         await removeFichaTecnica('produto_id', produtoId);
       }
+      
       // Filtrar ingredientes duplicados
       const ingredientesUnicos = ingredientes.filter((item, index, self) =>
         index === self.findIndex(i => i.id === item.id)
       );
+      
       console.log('Ingredientes a serem inseridos:', ingredientesUnicos);
+      
       // Insert ficha_tecnica
       if (produtoId) {
         console.log('ProdutoId para inserir ingredientes:', produtoId);
@@ -189,11 +215,15 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
           }
         }
       }
+      
       toast.success('Ficha técnica salva com sucesso!');
+      
       // Refetch ficha técnica e produtos para garantir sincronização
       await refetchFichaTecnica();
       await refetchProdutos();
       await queryClient.invalidateQueries({ queryKey: ['produtos', 'list'] });
+      await queryClient.invalidateQueries({ queryKey: ['ficha_tecnica', 'by-produto', produtoId || ''] });
+      
       return true;
     } catch (error: any) {
       toast.error('Erro ao salvar produto/ficha técnica: ' + (error?.message || error));
