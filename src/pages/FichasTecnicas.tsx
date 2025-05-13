@@ -6,7 +6,7 @@ import { useFichaTecnica } from '@/hooks/use-ficha-tecnica';
 import ProdutoDataTable from '@/components/fichas-tecnicas/ProdutoDataTable';
 import FichaTecnicaSheet from '@/components/fichas-tecnicas/FichaTecnicaSheet';
 import { useSupabaseMutation } from '@/hooks/use-supabase';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/use-toast';
 
 export default function FichasTecnicas() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -19,6 +19,7 @@ export default function FichasTecnicas() {
     setCurrentProduto,
     ingredientes,
     setIngredientes,
+    ingredientesLoaded,
     handleNewProduto,
     handleEditProduto,
     handleSaveProduto,
@@ -66,11 +67,18 @@ export default function FichasTecnicas() {
           await deleteProduto(id);
         }
         setSelectedIds([]);
-        toast.success('Produtos excluídos com sucesso!');
+        toast({
+          title: "Sucesso",
+          description: "Produtos excluídos com sucesso!"
+        });
       }
     } catch (error) {
       console.error('Erro ao excluir produtos:', error);
-      toast.error('Erro ao excluir produtos');
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao excluir produtos"
+      });
     }
   };
 
@@ -114,6 +122,7 @@ export default function FichasTecnicas() {
         setCurrentProduto={setCurrentProduto}
         ingredientes={ingredientes}
         setIngredientes={setIngredientes}
+        ingredientesLoaded={ingredientesLoaded}
         onSave={handleSave}
       />
     </>

@@ -1,7 +1,7 @@
 
 import { useSupabaseMutation } from '@/hooks/use-supabase';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/use-toast';
 import { ProdutoWithFichaTecnica, IngredienteQuantidade } from '@/types/ficha-tecnica.types';
 
 interface UseSaveProdutoProps {
@@ -68,7 +68,10 @@ export function useSaveProduto({
         try {
           newProduto = await insertProduto(produtoToInsert);
         } catch (err) {
-          toast.error('Erro real do Supabase: ' + (err?.message || JSON.stringify(err)));
+          toast.error({
+            title: "Erro ao inserir produto",
+            description: (err?.message || JSON.stringify(err))
+          });
           console.error('Erro real do Supabase ao inserir produto:', err);
           throw err;
         }
@@ -88,19 +91,39 @@ export function useSaveProduto({
         
         // First remove all existing ingredients for this product
         console.log('Removing existing ingredients for produto:', produtoId);
-        await removeFichaTecnica('produto_id', produtoId);
+        try {
+          // Important: AWAIT here to ensure deletion completes before insertion
+          await removeFichaTecnica('produto_id', produtoId);
+          
+          // Small delay to ensure deletion completes in DB
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          console.log('Successfully removed existing ingredients for produto:', produtoId);
+        } catch (err) {
+          toast.error({
+            title: "Erro ao remover ingredientes existentes",
+            description: (err?.message || JSON.stringify(err))
+          });
+          console.error('Erro ao remover ingredientes existentes:', err);
+          throw err;
+        }
       }
       
       // Filtrar ingredientes duplicados
-      const ingredientesUnicos = ingredientes.filter((item, index, self) =>
-        index === self.findIndex(i => i.id === item.id)
-      );
+      const ingredientesMap = new Map();
+      ingredientes.forEach(item => {
+        if (item.quantidade > 0) {
+          ingredientesMap.set(item.id, item);
+        }
+      });
+      const ingredientesUnicos = Array.from(ingredientesMap.values());
       
-      console.log('Ingredientes a serem inseridos:', ingredientesUnicos);
+      console.log('Ingredientes únicos a serem inseridos:', ingredientesUnicos);
       
       // Insert ficha_tecnica
       if (produtoId) {
         console.log('ProdutoId para inserir ingredientes:', produtoId);
+        // Insert cada ingrediente individualmente para melhor controle de erros
         for (const ingrediente of ingredientesUnicos) {
           if (ingrediente.quantidade > 0) {
             try {
@@ -111,13 +134,20 @@ export function useSaveProduto({
               });
             } catch (err) {
               console.error('Erro ao inserir ingrediente na ficha técnica:', err);
-              throw err;
+              toast.error({
+                title: "Erro ao inserir ingrediente",
+                description: `Ingrediente: ${ingrediente.id} - ${err?.message || JSON.stringify(err)}`
+              });
+              // Continue trying to insert other ingredients
             }
           }
         }
       }
       
-      toast.success('Ficha técnica salva com sucesso!');
+      toast.success({
+        title: "Sucesso",
+        description: "Ficha técnica salva com sucesso!"
+      });
       
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ['produtos', 'list'] });
@@ -125,7 +155,10 @@ export function useSaveProduto({
       
       return true;
     } catch (error: any) {
-      toast.error('Erro ao salvar produto/ficha técnica: ' + (error?.message || error));
+      toast.error({
+        title: "Erro ao salvar",
+        description: `Erro: ${error?.message || JSON.stringify(error)}`
+      });
       console.error('Erro ao salvar produto/ficha técnica:', error);
       return false;
     }

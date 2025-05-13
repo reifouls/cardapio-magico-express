@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -187,5 +188,27 @@ function useToast() {
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
+
+// Add these helpers for compatibility with Sonner
+toast.success = (props: string | Toast) => {
+  if (typeof props === "string") {
+    return toast({ description: props, variant: "default" });
+  }
+  return toast({ ...props, variant: "default" });
+};
+
+toast.error = (props: string | Toast) => {
+  if (typeof props === "string") {
+    return toast({ description: props, variant: "destructive" });
+  }
+  return toast({ ...props, variant: "destructive" });
+};
+
+toast.warning = (props: string | Toast) => {
+  if (typeof props === "string") {
+    return toast({ description: props });
+  }
+  return toast(props);
+};
 
 export { useToast, toast }

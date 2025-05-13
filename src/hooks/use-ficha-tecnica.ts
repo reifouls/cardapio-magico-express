@@ -54,7 +54,8 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
   // Initialize ingredients state
   const {
     ingredientes,
-    setIngredientes
+    setIngredientes,
+    ingredientesLoaded
   } = useIngredientesState({ 
     fichaTecnica, 
     produtoId: currentProduto?.id 
@@ -82,6 +83,7 @@ export function useFichaTecnica(options?: UseFichaTecnicaOptions) {
     setCurrentProduto,
     ingredientes,
     setIngredientes,
+    ingredientesLoaded,
     handleNewProduto,
     handleEditProduto,
     handleSaveProduto,

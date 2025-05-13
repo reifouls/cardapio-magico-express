@@ -12,6 +12,7 @@ interface FichaTecnicaSheetProps {
   ingredientes: IngredienteQuantidade[];
   setIngredientes: React.Dispatch<React.SetStateAction<IngredienteQuantidade[]>>;
   onSave: () => Promise<boolean>;
+  ingredientesLoaded?: boolean;
 }
 
 const FichaTecnicaSheet: React.FC<FichaTecnicaSheetProps> = ({
@@ -21,15 +22,17 @@ const FichaTecnicaSheet: React.FC<FichaTecnicaSheetProps> = ({
   setCurrentProduto,
   ingredientes,
   setIngredientes,
-  onSave
+  onSave,
+  ingredientesLoaded = true
 }) => {
   // Log when the sheet opens with product and ingredients data
   useEffect(() => {
     if (isOpen) {
       console.log('Sheet opened with produto:', currentProduto);
       console.log('Ingredients loaded:', ingredientes);
+      console.log('Ingredients loading state:', ingredientesLoaded);
     }
-  }, [isOpen, currentProduto, ingredientes]);
+  }, [isOpen, currentProduto, ingredientes, ingredientesLoaded]);
   
   const handleSave = async () => {
     console.log('Saving with ingredients:', ingredientes);
@@ -54,6 +57,7 @@ const FichaTecnicaSheet: React.FC<FichaTecnicaSheetProps> = ({
           ingredientes={ingredientes}
           setIngredientes={setIngredientes}
           onSave={handleSave}
+          isLoading={!ingredientesLoaded && !!currentProduto?.id}
         />
       </SheetContent>
     </Sheet>
