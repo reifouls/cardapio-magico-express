@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,21 +36,21 @@ export default function FichasTecnicas() {
     setIsFormOpen(true);
   };
 
-  const handleEditClick = (produto: any) => {
+  const handleEditClick = async (produto: any) => {
     console.log('Edit clicked for produto:', produto);
     handleEditProduto(produto);
+    setIsFormOpen(true);
     
     // Force fetch ficha tecnica data after a short delay to ensure everything is loaded
     setTimeout(() => {
       refetchFichaTecnica();
     }, 100);
-    
-    setIsFormOpen(true);
   };
 
   const handleSave = async () => {
     const success = await handleSaveProduto();
     if (success) {
+      setIsFormOpen(false);
       setCurrentProduto(null);
       setIngredientes([]);
     }

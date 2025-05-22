@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { IngredienteQuantidade, FichaTecnica, Ingrediente } from '@/types/ficha-tecnica.types';
 
@@ -19,33 +18,24 @@ export function useIngredientesState({ fichaTecnica, produtoId }: UseIngrediente
     }
     
     if (fichaTecnica && produtoId) {
-      console.log('Loaded ficha tecnica:', fichaTecnica);
+      console.log('Loading ficha tecnica:', fichaTecnica);
       
       // Only set ingredients if we have ficha tecnica data
       if (fichaTecnica.length > 0) {
-        // Create a map to handle potential duplicates from the database
-        const ingredientMap = new Map<string, number>();
+        const ingredientesMap = new Map<string, number>();
         
         // Collect all ingredients with their quantities
         fichaTecnica.forEach(item => {
-          if (ingredientMap.has(item.ingrediente_id)) {
-            // If duplicate, use the highest quantity (should not happen, but just in case)
-            const existingQty = ingredientMap.get(item.ingrediente_id) || 0;
-            if (item.quantidade_utilizada > existingQty) {
-              ingredientMap.set(item.ingrediente_id, item.quantidade_utilizada);
-            }
-          } else {
-            ingredientMap.set(item.ingrediente_id, item.quantidade_utilizada);
-          }
+          ingredientesMap.set(item.ingrediente_id, item.quantidade_utilizada);
         });
         
         // Convert map to array of ingredients
-        const uniqueIngredientes = Array.from(ingredientMap.entries()).map(([id, quantidade]) => ({
+        const uniqueIngredientes = Array.from(ingredientesMap.entries()).map(([id, quantidade]) => ({
           id,
           quantidade
         }));
         
-        console.log('Setting unique ingredients:', uniqueIngredientes);
+        console.log('Setting ingredients:', uniqueIngredientes);
         setIngredientes(uniqueIngredientes);
       } else {
         console.log('No ficha tecnica data, resetting ingredients');

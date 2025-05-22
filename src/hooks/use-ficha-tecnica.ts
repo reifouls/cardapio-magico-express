@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useSupabaseQuery } from '@/hooks/use-supabase';
 import { ProdutoWithFichaTecnica, UseFichaTecnicaOptions } from '@/types/ficha-tecnica.types';
